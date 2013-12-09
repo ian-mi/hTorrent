@@ -1,5 +1,6 @@
 module Peer.Connection (forkPeer) where
 
+import Common
 import MetaInfo
 import Morphisms
 import Peer.Env
@@ -13,19 +14,7 @@ import Peer.Send
 import Piece
 import qualified Torrent as T
 
-import Control.Applicative
-import Control.Concurrent
-import Control.Concurrent.STM.TMVar
-import Control.Concurrent.STM.TVar
-import Control.Concurrent.STM.TQueue
-import Control.Lens
-import Control.Monad.Reader
-import Control.Monad.State
-import Data.Conduit
 import Data.Conduit.Network
-import qualified Data.IntSet as IS
-import qualified Data.IntMap as IM
-import qualified Data.Set as S
 import Network.Socket
 
 forkPeer :: SockAddr -> ReaderT T.TorrentState IO ()

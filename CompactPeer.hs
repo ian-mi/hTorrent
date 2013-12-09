@@ -1,11 +1,9 @@
 module CompactPeer where
 
-import Control.Applicative
+import Common
+
 import Data.Binary.Get
-import Data.ByteString as BS
-import Data.ByteString.Lazy
-import Data.Word
-import Control.Lens
+import qualified Data.ByteString.Lazy as LBS
 import Network.Socket
 
 foreign import ccall unsafe "htonl" htonl :: Word32 -> Word32
@@ -19,7 +17,6 @@ parsePort = fromIntegral <$> getWord16be
 parseCompactPeer :: Get SockAddr
 parseCompactPeer = flip SockAddrInet <$> parseAddress <*> parsePort
 
-compactPeers :: BS.ByteString -> Maybe [SockAddr]
+compactPeers :: ByteString -> Maybe [SockAddr]
 compactPeers bs = result ^? _Right . _3
-    where result = runGetOrFail (many parseCompactPeer) (fromStrict bs)
-
+    where result = runGetOrFail (many parseCompactPeer) (LBS.fromStrict bs)

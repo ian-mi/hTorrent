@@ -1,10 +1,8 @@
 module Peer.Env where
 
+import Common
 import Peer.Message
 
-import Control.Applicative
-import Control.Concurrent.STM.TVar
-import Control.Lens
 import qualified Data.IntSet as IS
 import qualified Data.Set as S
 
@@ -16,8 +14,8 @@ $(makeLenses ''ConnectionState)
 data PeerEnv = PeerEnv {
     _localState :: ConnectionState,
     _peerState :: ConnectionState,
-    _pieces :: TVar IS.IntSet,
-    _pendingRequests :: TVar (S.Set ChunkInd) }
+    _pieces :: TVar IntSet,
+    _pendingRequests :: TVar (Set ChunkInd) }
 $(makeLenses ''PeerEnv)
 
 initConnectionState :: IO ConnectionState

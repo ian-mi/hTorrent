@@ -1,23 +1,17 @@
 module Interface(startInterface) where
 
+import Common
 import Interface.Expand
 import MetaInfo
 import Torrent
 import Torrent.Env
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TMVar
-import Control.Concurrent.STM.TVar
-import Control.Lens
-import Control.Monad.Reader
-import qualified Data.ByteString as BS
 import qualified Data.IntMap as IM
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import Reactive.Threepenny
 
-data Behaviors = Behaviors { _completedB :: Behavior (IM.IntMap BS.ByteString) }
+data Behaviors = Behaviors { _completedB :: Behavior (IntMap ByteString) }
 $(makeLenses ''Behaviors)
 
 startInterface :: TorrentState -> IO ()
@@ -44,7 +38,7 @@ completedUI b = do
     expand name [completedTable]
     where completedAttr = mkWriteAttr updateCompleted
 
-updateCompleted :: IM.IntMap BS.ByteString -> Element -> UI ()
+updateCompleted :: IntMap ByteString -> Element -> UI ()
 updateCompleted c t = do
     cells <- mapM f (IM.keys c)
     void (UI.set UI.children cells (UI.element t))

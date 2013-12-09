@@ -1,5 +1,6 @@
 module Main where
 
+import Common
 import CompactPeer
 import Interface
 import MetaInfo
@@ -7,10 +8,6 @@ import Torrent
 import Tracker
 import Peer.Connection
 
-import Control.Applicative
-import Control.Concurrent
-import Control.Lens
-import Control.Monad.Reader
 import Network.HTTP
 import Network.Socket
 

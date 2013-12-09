@@ -1,17 +1,10 @@
 module Peer.RequestBuffer (BufEnv(BufEnv), bufferRequests) where
 
+import Common
 import Morphisms
 
-import Control.Concurrent.STM
-import Control.Concurrent.STM.Lens
-import Control.Applicative
-import Control.Lens
 import Control.Monad.Loops
-import Control.Monad.Reader
-import Control.Monad.State
 import Control.Monad.STM.Class
-import Data.List
-import Data.Maybe
 
 data BufEnv a = BufEnv {    _requested :: TQueue a,
                             _cancelled :: TQueue a,

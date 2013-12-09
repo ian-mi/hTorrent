@@ -1,8 +1,6 @@
 module Peer.Message where
 
-import Control.Lens
-import qualified Data.ByteString as BS
-import qualified Data.IntSet as IS
+import Common
 
 data MessageType =  Choke |
                     Unchoke |
@@ -25,7 +23,7 @@ data ChunkInd = ChunkInd {  _pieceInd :: Int,
 
 $(makeLenses ''ChunkInd)
 
-data Chunk = Chunk { _chunkInd :: ChunkInd, _chunkData :: BS.ByteString }
+data Chunk = Chunk { _chunkInd :: ChunkInd, _chunkData :: ByteString }
 
 $(makeLenses ''Chunk)
 
@@ -34,7 +32,7 @@ data PeerMessage =  ChokeMessage |
                     InterestedMessage |
                     UninterestedMessage |
                     HaveMessage Int |
-                    BitfieldMessage IS.IntSet |
+                    BitfieldMessage IntSet |
                     RequestMessage ChunkInd |
                     PieceMessage Chunk |
                     CancelMessage ChunkInd

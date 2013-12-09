@@ -1,10 +1,9 @@
 module BEncodeI where
 
-import Control.Applicative
-import Control.Lens
-import Data.ByteString
+import Common
+
 import Data.Char
-import Data.Map
+import qualified Data.Map as M
 import Text.Parsec as Par hiding ((<|>), many)
 
 data BEncode = BString String | BInt Int | BList [BEncodeI] |
@@ -45,7 +44,7 @@ digitI = digit <* modifyState (+1)
 natI :: Parsec ByteString Int Int
 natI =  f . fmap digitToInt <$> some digitI
     where   f :: [Int] -> Int
-            f = Prelude.foldl ((+) . (*10)) 0
+            f = foldl ((+) . (*10)) 0
 
 takeI :: Int -> Parsec ByteString Int String
 takeI i = Par.count i anyChar <* modifyState (+i)
@@ -60,7 +59,7 @@ parseListI :: Parsec ByteString Int [BEncodeI]
 parseListI = charI 'l' *> many parseBEncodeI <* charI 'e'
 
 parseDictI :: Parsec ByteString Int (Map String BEncodeI)
-parseDictI = fromList <$> (charI 'd' *> many parsePairI <* charI 'e')
+parseDictI = M.fromList <$> (charI 'd' *> many parsePairI <* charI 'e')
     where parsePairI = (,) <$> parseStringI <*> parseBEncodeI
 
 parseBEncodeI :: Parsec ByteString Int BEncodeI

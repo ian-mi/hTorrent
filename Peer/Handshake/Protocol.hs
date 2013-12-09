@@ -1,13 +1,14 @@
 module Peer.Handshake.Protocol where
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as CBS
+import Common
 
-protocol :: BS.ByteString
+import qualified Data.ByteString as BS
+
+protocol :: ByteString
 protocol = "BitTorrent protocol"
 
 protocolLength :: Int
 protocolLength = BS.length protocol
 
-reservedBytes :: BS.ByteString
-reservedBytes = BS.pack (replicate 8 0)
+reservedBytes :: ByteString
+reservedBytes = BS.replicate 8 0

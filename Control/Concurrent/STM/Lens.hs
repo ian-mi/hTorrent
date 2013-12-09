@@ -6,6 +6,7 @@ import Control.Lens
 import Control.Monad.Reader
 import Control.Concurrent.STM
 import Control.Monad.STM.Class
+import Prelude
 
 viewTVar :: (MonadReader e m, MonadSTM m) => Getting (TVar a) e (TVar a) -> m a
 viewTVar v = view v >>= liftSTM . readTVar

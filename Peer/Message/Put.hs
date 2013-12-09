@@ -1,24 +1,17 @@
 module Peer.Message.Put where
 
+import Common
 import Peer.Message
 
-import Control.Applicative
-import Control.Lens
-import Control.Monad
 import Data.Binary.Put
 import Data.Bits
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import Data.Conduit hiding (Chunk)
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Serialization.Binary
 import qualified Data.IntSet as IS
-import Data.Foldable hiding (mapM_)
-import Data.List
 import Data.Monoid
-import Data.Word
 
-putMessages :: MonadThrow m => Int -> Conduit PeerMessage m BS.ByteString
+putMessages :: MonadThrow m => Int -> Conduit PeerMessage m ByteString
 putMessages p = CL.map (addLength . putMessage p) =$= conduitPut
 
 addLength :: Put -> Put
@@ -45,7 +38,7 @@ putMessageType = putWord8 . fromIntegral . fromEnum
 putChunkInd :: ChunkInd -> Put
 putChunkInd (ChunkInd p i l) = putInt p >> putInt i >> putInt l
 
-putBitfield :: Int -> IS.IntSet -> Put
+putBitfield :: Int -> IntSet -> Put
 putBitfield p b = mapM_ (putWord8 . fromBits) bits
     where   bits = map reverse (groupBits 8 p (IS.toAscList b))
 

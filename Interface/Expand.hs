@@ -1,7 +1,7 @@
 module Interface.Expand (expand) where
 
-import Control.Applicative
-import Control.Monad
+import Common
+
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 
@@ -10,9 +10,9 @@ expand name body = do
     button <- UI.span
     let clickEvent = unionWith const (UI.click button) (UI.click name)
     expanded <-  accumB False (not <$ clickEvent)
-    sink text (showButton <$> expanded) (element button)
-    bodySpan <- sink children (setChildren body <$> expanded) UI.span
-    row [element button, element name] #+ [element bodySpan]
+    sink text (showButton <$> expanded) (UI.element button)
+    bodySpan <- sink UI.children (setChildren body <$> expanded) UI.span
+    row [UI.element button, UI.element name] #+ [UI.element bodySpan]
 
 showButton :: Bool -> String
 showButton True = "-"

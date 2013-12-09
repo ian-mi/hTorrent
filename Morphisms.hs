@@ -3,6 +3,7 @@ module Morphisms where
 import Control.Lens
 import Control.Monad.Reader
 import Control.Monad.State
+import Prelude
 
 embedReader :: MonadReader r m => (forall a. n a -> m a) -> ReaderT r n a -> m a
 embedReader f r = ask >>= f . runReaderT r

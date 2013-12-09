@@ -1,5 +1,6 @@
 module Peer.Request (requestThread, RequestEnv(RequestEnv)) where
 
+import Common
 import Control.Concurrent.STM.Lens
 import Morphisms
 import Peer.Env
@@ -7,19 +8,10 @@ import Peer.Message
 import Piece
 import Torrent.Env
 
-import Control.Applicative
-import Control.Concurrent.STM
 import Control.Concurrent.STM.State
-import Control.Concurrent.STM.TQueue
-import Control.Concurrent.STM.TVar
-import Control.Lens
-import Control.Monad.Reader
-import Control.Monad.State
 import Control.Monad.STM.Class
-import Control.Monad.Trans.Maybe
 import qualified Data.IntMap as IM
 import qualified Data.IntSet as IS
-import Data.Maybe
 import qualified Data.Set as S
 
 data RequestEnv = RequestEnv {
@@ -86,5 +78,5 @@ interestedPieces = do
     i <- liftM (flip filterKeys d . flip IS.member) (viewTVar (peer . pieces))
     liftSTM (filterM (liftM (not . full) . readTVar . snd) (IM.toList i))
 
-filterKeys :: (Int -> Bool) -> IM.IntMap a -> IM.IntMap a
+filterKeys :: (Int -> Bool) -> IntMap a -> IntMap a
 filterKeys = IM.filterWithKey . (const .)

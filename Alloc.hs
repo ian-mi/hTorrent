@@ -1,32 +1,29 @@
 module Alloc where
 
-import Control.Applicative
-import Control.Arrow
-import Control.Lens
-import Control.Monad.State
+import Common
+
 import qualified Data.ByteString as BS
 import qualified Data.IntMap as IM
-import Data.Maybe
 
 class Alloc a where
     size :: a -> Int
     truncate :: Int -> a -> a
-    delete :: Int -> a -> a
+    del :: Int -> a -> a
     append :: a -> a -> a
 
 merge :: Alloc a => Int -> a -> a -> a
-merge o a b = append a (delete o b)
+merge o a b = append a (del o b)
 
 instance Alloc Int where
     size = id
     truncate = min . max 0
-    delete d a = max 0 (a - max 0 d)
+    del d a = max 0 (a - max 0 d)
     append = (+)
 
-instance Alloc BS.ByteString where
+instance Alloc ByteString where
     size = BS.length
     append = BS.append
-    delete = BS.drop
+    del = BS.drop
     truncate = BS.take
 
 complementAsc :: Int -> [(Int, Int)] -> [(Int, Int)]
@@ -35,17 +32,17 @@ complementAsc s is = filter (not . uncurry (==)) c
             t = is ^.. traverse . _1
             b = is ^.. traverse . _2
 
-freeAsc :: Alloc a => Int -> IM.IntMap a -> [(Int,Int)]
+freeAsc :: Alloc a => Int -> IntMap a -> [(Int,Int)]
 freeAsc s = complementAsc s . usedAsc
 
-usedAsc :: Alloc a => IM.IntMap a -> [(Int,Int)]
+usedAsc :: Alloc a => IntMap a -> [(Int,Int)]
 usedAsc = fmap f . IM.toAscList
     where f (s, l) = (s, s + size l)
 
-unionAlloc :: Alloc a => IM.IntMap a -> IM.IntMap a -> IM.IntMap a
+unionAlloc :: Alloc a => IntMap a -> IntMap a -> IntMap a
 unionAlloc = ifoldrOf itraversed (curry (execState . alloc))
 
-alloc :: (Alloc a, MonadState (IM.IntMap a) m) => (Int, a) -> m ()
+alloc :: (Alloc a, MonadState (IntMap a) m) => (Int, a) -> m ()
 alloc n@(i, _) = do
     m <- gets (fromMaybe n . (>>= flip mergeAlloc n) . IM.lookupLE i)
     u <- gets (IM.lookupGE i)

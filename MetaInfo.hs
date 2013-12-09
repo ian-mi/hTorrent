@@ -1,14 +1,10 @@
 module MetaInfo where
 
 import BEncodeI
+import Common
 
-import Control.Applicative
-import Control.Lens
-import Control.Monad
-import Control.Monad.Reader
 import qualified Crypto.Hash.SHA1 as SHA1
-import Data.ByteString.Char8 as BS
-import Data.Maybe
+import qualified Data.ByteString as BS
 import Network.URI
 import Text.Parsec hiding ((<|>))
 
@@ -19,7 +15,7 @@ data Info = Info {  _name :: String,
                     _file :: Either Int [File],
                     _hash :: ByteString } deriving Show
 
-data File = File {_length :: Int, _path :: String} deriving Show
+data File = File {_fileLength :: Int, _path :: String} deriving Show
 
 $(makeLenses ''MetaInfo)
 $(makeLenses ''Info)
@@ -34,7 +30,7 @@ parseInfo :: BEncodeI -> ReaderT ByteString Maybe Info
 parseInfo b = Info <$> n <*> p <*> ps <*> (Left <$> l <|> Right <$> fs) <*> getHash b
     where   n = lift (bLookup "name" bString b)
             p = lift (bLookup "piece length" bInt b)
-            ps = lift (pack <$> bLookup "pieces" bString b)
+            ps = lift (fromString <$> bLookup "pieces" bString b)
             l = lift (bLookup "length" bInt b)
             fs = lift (bLookup "files" bList b >>= mapM parseFile)
 

@@ -1,22 +1,14 @@
 module Peer.Send (SendEnv(SendEnv), SendState(..), messages) where
 
+import Common
 import Peer.Env
 import Peer.Message
 import Morphisms
 import Torrent.Env
 
-import Control.Applicative
-import Control.Concurrent.STM
-import Control.Concurrent.STM.Lens
-import Control.Lens
-import Control.Monad.State
-import Control.Monad.Reader
 import Control.Monad.STM.Class
 import qualified Data.ByteString as BS
-import Data.Conduit hiding (Chunk)
-import qualified Data.Set as S
 import qualified Data.IntMap as IM
-import qualified Data.IntSet as IS
 
 data SendEnv = SendEnv {
     _requests :: TQueue ChunkInd,

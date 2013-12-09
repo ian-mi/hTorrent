@@ -1,9 +1,7 @@
 module Control.Concurrent.STM.State where
 
-import Control.Applicative
-import Control.Concurrent.STM.TVar
-import Control.Monad
-import Control.Monad.State
+import Common
+
 import Control.Monad.STM.Class
 
 tvarState :: MonadSTM m => State s a -> TVar s -> m a

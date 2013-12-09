@@ -1,15 +1,14 @@
 module Tracker where
 
 import BEncode
+import Common
 import MetaInfo
 import Torrent
 import Peer
 import CompactPeer
 
-import Control.Applicative
-import Control.Lens
 import Data.Attoparsec.ByteString
-import Data.ByteString.Char8
+import Data.ByteString.Char8 (unpack)
 import Network.HTTP
 import Network.HTTP.Types.URI
 import Network.Socket
@@ -20,10 +19,10 @@ formatRequest s = mkRequest GET uri
     where   query = renderSimpleQuery True [
                 ("info_hash", s ^. metaInfo . info . hash),
                 ("peer_id", s ^. peerId),
-                ("port", pack (show (s ^. portNumber))),
-                ("uploaded", pack (show (s ^. uploaded))),
-                ("downloaded", pack (show (s ^. downloaded))),
-                ("left", pack (show (s ^. left))),
+                ("port", fromString (show (s ^. portNumber))),
+                ("uploaded", fromString (show (s ^. uploaded))),
+                ("downloaded", fromString (show (s ^. downloaded))),
+                ("left", fromString (show (s ^. remaining))),
                 ("compact", "1"),
                 ("event", "started") ]
             uri = (s ^. metaInfo . announce) {uriQuery = unpack query}

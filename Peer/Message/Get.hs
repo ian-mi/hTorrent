@@ -1,21 +1,18 @@
 module Peer.Message.Get (getMessages) where
 
+import Common
 import Peer.Message
 
-import Control.Applicative
-import Control.Lens
 import Data.Binary.Get
 import Data.Bits.Lens
-import Data.Conduit hiding (Chunk)
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Serialization.Binary
-import qualified Data.IntSet as IS
 import Data.IntSet.Lens
 import qualified Data.ByteString as BS
 import Data.ByteString.Lens
 import qualified Data.ByteString.Lazy as LBS
 
-getMessages :: MonadThrow m => Conduit BS.ByteString m PeerMessage
+getMessages :: MonadThrow m => Conduit ByteString m PeerMessage
 getMessages = conduitGet getPacket =$= CL.map (runGet getMessage)
 
 getPacket :: Get LBS.ByteString
@@ -50,8 +47,8 @@ getChunkInd = ChunkInd <$> getInt <*> getInt <*> getInt
 getInt :: Get Int
 getInt = fromIntegral <$> getWord32be
 
-toBits :: LBS.ByteString -> IS.IntSet
+toBits :: LBS.ByteString -> IntSet
 toBits = setOf (indexing (bytes . backwards bits) . filtered id . asIndex)
 
-getBitfield :: Get IS.IntSet
+getBitfield :: Get IntSet
 getBitfield = toBits <$> getRemainingLazyByteString

@@ -6,11 +6,10 @@ module BEncode (BEncode(..),
                 bDict,
                 bLookup) where
 
-import Control.Applicative
-import Control.Lens
+import Common
+
 import Data.Attoparsec.ByteString.Char8 as Atto
-import Data.ByteString.UTF8
-import Data.Map
+import qualified Data.Map as M
 
 data BEncode = BString ByteString | BInt Int | BList [BEncode] |
                 BDict (Map ByteString BEncode) deriving Show
@@ -49,7 +48,7 @@ parseList :: Parser [BEncode]
 parseList = char 'l' *> many parseBEncode <* char 'e'
 
 parseDict :: Parser (Map ByteString BEncode)
-parseDict = fromList <$> (char 'd' *> many parsePair <* char 'e')
+parseDict = M.fromList <$> (char 'd' *> many parsePair <* char 'e')
     where parsePair = (,) <$> parseString <*> parseBEncode
 
 bLookup :: String -> Traversal' BEncode a -> BEncode -> Maybe a
