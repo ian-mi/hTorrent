@@ -1,6 +1,5 @@
 module Peer.Connection (forkPeer) where
 
-import Common
 import MetaInfo
 import Morphisms
 import Peer.Env
@@ -14,6 +13,7 @@ import Peer.Send
 import Piece
 import qualified Torrent as T
 
+import HTorrentPrelude
 import Data.Conduit.Network
 import Network.Socket
 

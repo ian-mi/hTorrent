@@ -1,8 +1,8 @@
 module Peer where
 
 import BEncode
-import Common
 
+import HTorrentPrelude
 import Data.ByteString.UTF8
 import Network
 

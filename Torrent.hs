@@ -1,10 +1,10 @@
 module Torrent where
 
-import Common
 import MetaInfo
 import Piece
 import Torrent.Env
 
+import HTorrentPrelude
 import Data.Array
 import qualified Data.ByteString as BS
 import Network

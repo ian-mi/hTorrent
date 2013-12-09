@@ -6,8 +6,9 @@ module BEncode (BEncode(..),
                 bDict,
                 bLookup) where
 
-import Common
 
+import HTorrentPrelude
+import Control.Lens
 import Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.Map as M
 

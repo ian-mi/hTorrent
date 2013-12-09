@@ -1,7 +1,6 @@
 module CompactPeer where
 
-import Common
-
+import HTorrentPrelude
 import Data.Binary.Get
 import qualified Data.ByteString.Lazy as LBS
 import Network.Socket

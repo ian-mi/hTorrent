@@ -1,8 +1,8 @@
 module MetaInfo where
 
 import BEncodeI
-import Common
 
+import HTorrentPrelude
 import qualified Crypto.Hash.SHA1 as SHA1
 import qualified Data.ByteString as BS
 import Network.URI

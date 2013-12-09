@@ -1,6 +1,6 @@
 module Alloc where
 
-import Common
+import HTorrentPrelude
 
 import qualified Data.ByteString as BS
 import qualified Data.IntMap as IM

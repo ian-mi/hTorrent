@@ -1,18 +1,11 @@
 module Piece(PieceBuffer, addData, allocNext, full, emptyBuffer, complete) where
 
 import Alloc
-import Common
 import Morphisms
 
+import HTorrentPrelude
 import qualified Data.IntMap.Strict as IM
 import qualified Data.ByteString as BS
-
-import Control.Applicative
-import Control.Monad
-import Control.Monad.State
-import Control.Monad.State.Class
-import Control.Lens
-import Data.Maybe
 
 data PieceBuffer = PieceBuffer {    _pieceSize :: Int,
                                     _chunks :: IntMap ByteString,

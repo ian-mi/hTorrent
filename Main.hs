@@ -1,6 +1,5 @@
 module Main where
 
-import Common
 import CompactPeer
 import Interface
 import MetaInfo
@@ -8,13 +7,14 @@ import Torrent
 import Tracker
 import Peer.Connection
 
+import HTorrentPrelude
 import Network.HTTP
 import Network.Socket
 
 main :: IO ()
 main = do
     m <- readTorrent "debian-7.2.0-amd64-CD-1.iso.torrent"
-    maybe (putStr "invalid torrent") startTorrent m
+    maybe (putStrLn "invalid torrent") startTorrent m
 
 startTorrent :: MetaInfo -> IO ()
 startTorrent metaInfo = do

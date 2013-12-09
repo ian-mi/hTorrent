@@ -1,6 +1,6 @@
 module Peer.Message where
 
-import Common
+import HTorrentPrelude
 
 data MessageType =  Choke |
                     Unchoke |

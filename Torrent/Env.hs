@@ -1,8 +1,8 @@
 module Torrent.Env where
 
-import Common
 import Piece
 
+import HTorrentPrelude
 import qualified Data.IntMap as IM
 
 data TorrentEnv = TorrentEnv {

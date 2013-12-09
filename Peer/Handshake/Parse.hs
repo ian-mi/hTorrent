@@ -1,8 +1,8 @@
 module Peer.Handshake.Parse where
 
-import Common
 import Peer.Handshake.Protocol
 
+import HTorrentPrelude
 import Data.Attoparsec as A
 
 parseHandshake :: Parser (ByteString, ByteString)

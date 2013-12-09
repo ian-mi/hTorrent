@@ -1,7 +1,6 @@
 module BEncodeI where
 
-import Common
-
+import HTorrentPrelude
 import Data.Char
 import qualified Data.Map as M
 import Text.Parsec as Par hiding ((<|>), many)

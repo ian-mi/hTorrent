@@ -1,14 +1,14 @@
 module Tracker where
 
 import BEncode
-import Common
 import MetaInfo
 import Torrent
 import Peer
 import CompactPeer
 
+import HTorrentPrelude
 import Data.Attoparsec.ByteString
-import Data.ByteString.Char8 (unpack)
+import qualified Data.ByteString.Char8 as CBS
 import Network.HTTP
 import Network.HTTP.Types.URI
 import Network.Socket
@@ -25,7 +25,7 @@ formatRequest s = mkRequest GET uri
                 ("left", fromString (show (s ^. remaining))),
                 ("compact", "1"),
                 ("event", "started") ]
-            uri = (s ^. metaInfo . announce) {uriQuery = unpack query}
+            uri = (s ^. metaInfo . announce) {uriQuery = CBS.unpack query}
 
 parseResponse :: BEncode -> Maybe (Int, [Peer])
 parseResponse b = (,) <$> i <*> ps

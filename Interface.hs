@@ -1,11 +1,11 @@
 module Interface(startInterface) where
 
-import Common
 import Interface.Expand
 import MetaInfo
 import Torrent
 import Torrent.Env
 
+import HTorrentPrelude hiding (Element)
 import qualified Data.IntMap as IM
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core

@@ -1,6 +1,5 @@
 module Peer.Request (requestThread, RequestEnv(RequestEnv)) where
 
-import Common
 import Control.Concurrent.STM.Lens
 import Morphisms
 import Peer.Env
@@ -8,6 +7,7 @@ import Peer.Message
 import Piece
 import Torrent.Env
 
+import HTorrentPrelude
 import Control.Concurrent.STM.State
 import Control.Monad.STM.Class
 import qualified Data.IntMap as IM

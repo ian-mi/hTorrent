@@ -1,10 +1,10 @@
 module Peer.Handshake.Put where
 
-import Common
 import MetaInfo
 import Peer.Handshake.Protocol
 import Torrent
 
+import HTorrentPrelude
 import Data.Binary.Put
 
 putHandshake :: ReaderT TorrentState PutM ()

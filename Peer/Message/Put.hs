@@ -1,8 +1,8 @@
 module Peer.Message.Put where
 
-import Common
 import Peer.Message
 
+import HTorrentPrelude
 import Data.Binary.Put
 import Data.Bits
 import qualified Data.ByteString.Lazy as LBS

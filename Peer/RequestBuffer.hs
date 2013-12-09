@@ -1,10 +1,11 @@
 module Peer.RequestBuffer (BufEnv(BufEnv), bufferRequests) where
 
-import Common
 import Morphisms
 
+import HTorrentPrelude
 import Control.Monad.Loops
 import Control.Monad.STM.Class
+import qualified Data.List as L
 
 data BufEnv a = BufEnv {    _requested :: TQueue a,
                             _cancelled :: TQueue a,
@@ -41,7 +42,7 @@ getRequests :: (Eq a,
 getRequests = do
     rs <- liftM2 (++) (use bufferedRequests) (view requested >>= takeTQueue)
     cs <- view cancelled >>= takeTQueue
-    if null rs && null cs then liftSTM retry else bufferedRequests .= rs \\ cs
+    if null rs && null cs then liftSTM retry else bufferedRequests .= rs L.\\ cs
 
 waitEmptyTMVar :: MonadSTM m => TMVar a -> m ()
 waitEmptyTMVar v = liftSTM (isEmptyTMVar v >>= guard . not)

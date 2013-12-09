@@ -1,8 +1,8 @@
 module Peer.Message.Get (getMessages) where
 
-import Common
 import Peer.Message
 
+import HTorrentPrelude
 import Data.Binary.Get
 import Data.Bits.Lens
 import qualified Data.Conduit.List as CL

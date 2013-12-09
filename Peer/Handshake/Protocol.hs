@@ -1,7 +1,6 @@
 module Peer.Handshake.Protocol where
 
-import Common
-
+import HTorrentPrelude
 import qualified Data.ByteString as BS
 
 protocol :: ByteString

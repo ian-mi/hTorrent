@@ -1,7 +1,6 @@
 module Interface.Expand (expand) where
 
-import Common
-
+import HTorrentPrelude hiding (Element)
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 

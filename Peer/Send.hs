@@ -1,11 +1,11 @@
 module Peer.Send (SendEnv(SendEnv), SendState(..), messages) where
 
-import Common
 import Peer.Env
 import Peer.Message
 import Morphisms
 import Torrent.Env
 
+import HTorrentPrelude
 import Control.Monad.STM.Class
 import qualified Data.ByteString as BS
 import qualified Data.IntMap as IM

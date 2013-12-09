@@ -1,7 +1,6 @@
 module Control.Concurrent.STM.State where
 
-import Common
-
+import HTorrentPrelude
 import Control.Monad.STM.Class
 
 tvarState :: MonadSTM m => State s a -> TVar s -> m a

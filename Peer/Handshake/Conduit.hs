@@ -1,10 +1,10 @@
 module Peer.Handshake.Conduit where
 
-import Common
 import Peer.Handshake.Parse
 import Peer.Handshake.Put
 import Torrent
 
+import HTorrentPrelude
 import Data.Conduit.Attoparsec
 import Data.Conduit.Serialization.Binary
 

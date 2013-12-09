@@ -1,12 +1,12 @@
 module Peer.Get (GetEnv(..), handleMessages) where
 
-import Common
 import Peer.Env
 import Peer.Message
 import Piece
 import Morphisms
 import Torrent.Env
 
+import HTorrentPrelude
 import Control.Monad.STM.Class
 import qualified Data.Conduit.List as CL
 import qualified Data.IntMap as IM

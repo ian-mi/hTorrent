@@ -1,6 +1,6 @@
 module Peer.Env where
 
-import Common
+import HTorrentPrelude
 import Peer.Message
 
 import qualified Data.IntSet as IS
