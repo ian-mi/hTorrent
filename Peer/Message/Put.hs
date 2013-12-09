@@ -48,7 +48,7 @@ groupBits inc end xs = unfoldr f (0, xs)
                 where i' = i + inc
 
 fromBits :: [Int] -> Word8
-fromBits = (flip appEndo 0) . foldMap (Endo . flip setBit)
+fromBits = (flip appEndo 0) . concatMap (Endo . flip setBit)
 
 putInt :: Int -> Put
 putInt = putWord32be . fromIntegral 

@@ -29,7 +29,7 @@ import Control.Monad.Reader (ask, MonadReader, reader, ReaderT(ReaderT), runRead
 import Control.Monad.State (evalStateT, execState, get, gets, modify, MonadState, put, State, runState)
 import Control.Monad.Trans.Maybe
 import Data.Conduit hiding (Chunk)
-import Data.Foldable (foldMap, msum)
+import Data.Foldable (msum)
 import Data.IntSet (IntSet)
 import Data.IntMap (IntMap)
 import Data.List (foldl, unfoldr)
