@@ -103,12 +103,20 @@ peers :: Peers -> UI [Element]
 peers m = mapM (uncurry peerInterface) (mapToList m)
 
 peerInterface :: SockAddr -> PeerBehavior -> UI Element
-peerInterface a b = UI.tr #+ [address, interested, choked]
-    where   address = UI.set text (show a) UI.td
+peerInterface a b = UI.tr #+ [addressColor, interested, choked]
+    where   addressColor = sink style (addressStyle <$> remoteChokedB) address
+            address = UI.set text (show a) UI.td
             interested = sink text (showInterested <$> remoteInterestedB) UI.td
             choked = sink text (showChoked <$> remoteChokedB) UI.td
             remoteInterestedB = b ^. remoteStateB . interestedB
             remoteChokedB = b ^. remoteStateB . chokedB
+
+addressStyle :: Bool -> [(String, String)]
+addressStyle choked = [("color", chokedColor choked)]
+
+chokedColor :: Bool -> String
+chokedColor True = "#BF1616"
+chokedColor False = "#00A300"
 
 showInterested :: Bool -> String
 showInterested True = "+i"

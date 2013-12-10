@@ -44,4 +44,4 @@ startTorrent m p = do
 
 connectPeers :: TorrentState -> [SockAddr] -> IO (Map SockAddr PeerEnv)
 connectPeers ts as = mapFromList <$> mapM f as
-    where f = runKleisli (id &&& Kleisli (connectPeer ts))
+    where f = runKleisli (id &&& Kleisli (forkPeer ts))

@@ -5,8 +5,10 @@ module HTorrentPrelude (
     module Control.Concurrent,
     module Control.Concurrent.STM,
     module Control.Concurrent.STM.Lens,
+    module Control.Exception,
     module Control.Lens,
     module Control.Monad,
+    module Control.Monad.Exception.Synchronous,
     module Control.Monad.Reader,
     module Control.Monad.State,
     module Control.Monad.Trans.Maybe,
@@ -17,14 +19,22 @@ module HTorrentPrelude (
     module Data.List,
     module Data.Maybe ) where
 
-import ClassyPrelude hiding (Element, Index, cons, uncons, (<.>), hash)
+import ClassyPrelude hiding (Element, Index, cons, uncons, (<.>), hash, catch)
 import Control.Applicative
 import Control.Arrow
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 import Control.Concurrent.STM.Lens
+import Control.Exception (catch)
 import Control.Lens
 import Control.Monad (guard, liftM2)
+import Control.Monad.Exception.Synchronous (
+    assertT,
+    Exceptional(..),
+    ExceptionalT(..),
+    mapExceptionT,
+    throwT,
+    tryT)
 import Control.Monad.Reader (ask, MonadReader, reader, ReaderT(ReaderT), runReaderT)
 import Control.Monad.State (evalStateT, execState, get, gets, modify, MonadState, put, State, runState)
 import Control.Monad.Trans.Maybe
