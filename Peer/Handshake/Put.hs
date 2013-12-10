@@ -2,7 +2,7 @@ module Peer.Handshake.Put where
 
 import MetaInfo
 import Peer.Handshake.Protocol
-import Torrent
+import Torrent.State
 
 import HTorrentPrelude
 import Data.Binary.Put

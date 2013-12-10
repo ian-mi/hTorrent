@@ -1,23 +1,28 @@
 module Torrent.Env where
 
 import Piece
+import Torrent.Event
 
 import HTorrentPrelude
 import qualified Data.IntMap as IM
 
 data TorrentEnv = TorrentEnv {
     _completed :: TVar (IntMap ByteString),
-    _completedSig :: TMVar (),
-    _downloading :: TVar (IntMap (TVar PieceBuffer))
+    _downloading :: TVar (IntMap (TVar PieceBuffer)),
+    _torrentEvents :: TChan TorrentEvent
 }
 $(makeLenses ''TorrentEnv)
 
 initTorrentEnv :: Int -> Int -> IO (TorrentEnv)
 initTorrentEnv n l = do
     c <- newTVarIO IM.empty
-    cSig <- newEmptyTMVarIO
     d <- newDownloading n l
-    return TorrentEnv {_completed = c, _completedSig = cSig, _downloading = d}
+    events <- newBroadcastTChanIO
+    return TorrentEnv {
+        _completed = c,
+        _downloading = d,
+        _torrentEvents = events
+    }
 
 newDownloading :: Int -> Int -> IO (TVar (IntMap (TVar PieceBuffer)))
 newDownloading s p = do

@@ -1,6 +1,7 @@
 module Peer.Env where
 
 import HTorrentPrelude
+import Peer.Event
 import Peer.Message
 
 import qualified Data.IntSet as IS
@@ -13,9 +14,10 @@ $(makeLenses ''ConnectionState)
 
 data PeerEnv = PeerEnv {
     _localState :: ConnectionState,
-    _peerState :: ConnectionState,
+    _remoteState :: ConnectionState,
     _pieces :: TVar IntSet,
-    _pendingRequests :: TVar (Set ChunkInd) }
+    _pendingRequests :: TVar (Set ChunkInd),
+    _peerEvents :: TChan PeerEvent }
 $(makeLenses ''PeerEnv)
 
 initConnectionState :: IO ConnectionState
@@ -24,11 +26,13 @@ initConnectionState = ConnectionState <$> newTVarIO False <*> newTVarIO True
 initPeerEnv :: IO PeerEnv
 initPeerEnv = do
     s <- initConnectionState
-    p <- initConnectionState
+    r <- initConnectionState
     ps <- newTVarIO IS.empty
     pending <- newTVarIO S.empty
+    events <- newBroadcastTChanIO
     return PeerEnv {
         _localState = s,
-        _peerState = p,
+        _remoteState = r,
         _pieces = ps,
-        _pendingRequests = pending }
+        _pendingRequests = pending,
+        _peerEvents = events }

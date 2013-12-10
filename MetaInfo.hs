@@ -11,7 +11,7 @@ import Text.Parsec hiding ((<|>))
 data MetaInfo = MetaInfo {_announce :: URI, _info :: Info} deriving Show
 data Info = Info {  _name :: String,
                     _piece_length :: Int,
-                    _pieces :: ByteString,
+                    _pieceHashes :: ByteString,
                     _file :: Either Int [File],
                     _hash :: ByteString } deriving Show
 

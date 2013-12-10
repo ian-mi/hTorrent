@@ -51,7 +51,7 @@ nextRequest = do
 
 waitRequest :: (MonadReader RequestEnv m, MonadSTM m) => ChunkInd -> m ()
 waitRequest i = do
-    viewTVar (peer . peerState . choked) >>= liftSTM . guard . not
+    viewTVar (peer . remoteState . choked) >>= liftSTM . guard . not
     viewTVar (peer . pendingRequests) >>= liftSTM . guard . (< numPipeline) . S.size
     peer . pendingRequests &%= S.insert i
     view requests >>= liftSTM . flip writeTQueue i

@@ -1,10 +1,12 @@
 module Peer.Get (GetEnv(..), handleMessages) where
 
 import Peer.Env
+import Peer.Event
 import Peer.Message
 import Piece
 import Morphisms
 import Torrent.Env
+import Torrent.Event
 
 import HTorrentPrelude
 import Control.Monad.STM.Class
@@ -24,10 +26,22 @@ handleMessages :: (MonadReader GetEnv m, MonadIO m) => Consumer PeerMessage m ()
 handleMessages = CL.mapM_ handlePeerMessage
 
 handlePeerMessage :: (MonadReader GetEnv m, MonadIO m) => PeerMessage -> m ()
-handlePeerMessage ChokeMessage = peer . peerState . choked !.= True
-handlePeerMessage UnchokeMessage = peer . peerState . choked !.= False
-handlePeerMessage InterestedMessage = peer . peerState . interested !.= True
-handlePeerMessage UninterestedMessage = peer . peerState . interested !.= False
+handlePeerMessage ChokeMessage = do
+    peer . remoteState . choked !.= True
+    events <- view (peer . peerEvents)
+    liftIO (atomically (writeTChan events (ChokedRemote True)))
+handlePeerMessage UnchokeMessage = do
+    peer . remoteState . choked !.= False
+    events <- view (peer . peerEvents)
+    liftIO (atomically (writeTChan events (ChokedRemote False)))
+handlePeerMessage InterestedMessage = do
+    peer . remoteState . interested !.= True
+    events <- view (peer . peerEvents)
+    liftIO (atomically (writeTChan events (InterestedRemote True)))
+handlePeerMessage UninterestedMessage = do
+    peer . remoteState . interested !.= False
+    events <- view (peer . peerEvents)
+    liftIO (atomically (writeTChan events (InterestedRemote False)))
 handlePeerMessage (HaveMessage i) = peer . pieces !%= IS.insert i
 handlePeerMessage (BitfieldMessage b) = peer . pieces !.= b
 handlePeerMessage (RequestMessage r) = 
@@ -38,12 +52,16 @@ handlePeerMessage (PieceMessage (Chunk ind@(ChunkInd p i l) d)) =
         buf <- MaybeT (liftM (IM.lookup p) (viewTVar (torrent . downloading)))
         lift (addChunk buf (i, d))
         bs <- MaybeT (liftSTM (complete <$> readTVar buf))
-        torrent . downloading &%= (IM.delete p)
-        torrent . completed &%= IM.insert p bs
-        view (torrent . completedSig) >>= liftSTM . void . flip tryPutTMVar ()
-
+        lift (completePiece p bs)
 handlePeerMessage (CancelMessage c) = 
     view peerCancelled >>= liftIO . atomically . flip writeTQueue c
+
+completePiece :: Int -> ByteString -> ReaderT GetEnv STM ()
+completePiece pieceNumber pieceData = do
+    torrent . downloading &%= IM.delete pieceNumber
+    torrent.completed &%= IM.insert pieceNumber pieceData
+    events <- view (torrent . torrentEvents)
+    liftSTM (writeTChan events (PieceCompleted pieceNumber))
 
 addChunk :: MonadSTM m => TVar PieceBuffer -> (Int, ByteString) -> m ()
 addChunk buf =  liftSTM . modifyTVar buf . execState . addData

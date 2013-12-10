@@ -2,7 +2,7 @@ module Tracker where
 
 import BEncode
 import MetaInfo
-import Torrent
+import Torrent.State
 import Peer
 import CompactPeer
 

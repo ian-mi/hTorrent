@@ -50,7 +50,7 @@ waitInterested :: (MonadReader SendEnv m, MonadState SendState m, MonadSTM m)
     => m ()
 waitInterested = do
     i <- use curInterested
-    i' <- viewTVar (peer . peerState . interested)
+    i' <- viewTVar (peer . remoteState . interested)
     liftSTM (guard (not (i == i')))
     curInterested .= i'
 
