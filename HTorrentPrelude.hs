@@ -9,6 +9,7 @@ module HTorrentPrelude (
     module Control.Lens,
     module Control.Monad,
     module Control.Monad.Exception.Synchronous,
+    module Control.Monad.Morph,
     module Control.Monad.Reader,
     module Control.Monad.State,
     module Control.Monad.Trans.Maybe,
@@ -35,6 +36,7 @@ import Control.Monad.Exception.Synchronous (
     mapExceptionT,
     throwT,
     tryT)
+import Control.Monad.Morph
 import Control.Monad.Reader (ask, MonadReader, reader, ReaderT(ReaderT), runReaderT)
 import Control.Monad.State (evalStateT, execState, get, gets, modify, MonadState, put, State, runState)
 import Control.Monad.Trans.Maybe

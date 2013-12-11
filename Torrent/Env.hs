@@ -8,6 +8,7 @@ import qualified Data.IntMap as IM
 
 data TorrentEnv = TorrentEnv {
     _completed :: TVar (IntMap ByteString),
+    _numCompleted :: TVar Int,
     _downloading :: TVar (IntMap (TVar PieceBuffer)),
     _torrentEvents :: TChan TorrentEvent
 }
@@ -16,10 +17,12 @@ $(makeLenses ''TorrentEnv)
 initTorrentEnv :: Int -> Int -> IO (TorrentEnv)
 initTorrentEnv n l = do
     c <- newTVarIO IM.empty
+    nC <- newTVarIO 0
     d <- newDownloading n l
     events <- newBroadcastTChanIO
     return TorrentEnv {
         _completed = c,
+        _numCompleted = nC,
         _downloading = d,
         _torrentEvents = events
     }
