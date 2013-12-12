@@ -1,4 +1,4 @@
-module Peer.Connection (forkPeer) where
+module Peer.Connection (peerThread) where
 
 import HTorrentPrelude
 import MetaInfo
@@ -22,16 +22,10 @@ data PeerConnectionException =
 
 type ConnectionIO a = ExceptionalT PeerConnectionException IO a
 
-forkPeer :: T.TorrentState -> SockAddr -> IO PeerEnv
-forkPeer t a = do
-    env <- initPeerEnv
-    forkIO (peerThread a t env)
-    return env
-
-peerThread :: SockAddr -> T.TorrentState -> PeerEnv -> IO ()
-peerThread a t env = do
+peerThread :: T.TorrentState -> SockAddr -> IO ()
+peerThread t a = do
     s <- connectPeer a
-    r <- tryT (handlePeer t env s)
+    r <- tryT (handlePeer t s)
     case r of
         Success () -> return ()
         Exception e -> do
@@ -45,9 +39,9 @@ connectPeer a = do
     connect s a
     return s
 
-handlePeer :: T.TorrentState -> PeerEnv -> Socket -> ConnectionIO ()
-handlePeer t env s = do
-    id <- mapExceptionT FailedHandshake (handshake t s)
+handlePeer :: T.TorrentState -> Socket -> ConnectionIO ()
+handlePeer t s = do
+    env <- mapExceptionT FailedHandshake (handshake t s)
     lift $ do
         prs <- newTQueueIO
         pcd <- newTQueueIO

@@ -1,6 +1,7 @@
 module Interface (startInterface) where
 
-import Interface.Behaviors
+import Interface.Torrent.Behavior
+import Interface.Torrent.Handler
 import Interface.Completed
 import Interface.Peer
 import HTorrentPrelude
@@ -14,17 +15,17 @@ import Reactive.Threepenny
 
 startInterface :: TorrentState -> IO ()
 startInterface ts = do
-    (behaviors, handler) <- mkBehaviors ts
-    forkIO handler
-    startGUI config (interface behaviors)
+    (torrentBehavior, torrentHandlerEnv) <- runReaderT torrentBehavior (ts ^. env)
+    forkIO (runReaderT runTorrentHandlerInit torrentHandlerEnv)
+    startGUI config (interface torrentBehavior)
     where config = defaultConfig { tpPort = 10000 }
 
-interface :: Behaviors -> Window -> UI ()
+interface :: TorrentBehavior -> Window -> UI ()
 interface b w = do
     UI.set UI.title "hTorrent" (return w)
     void (getBody w #+ [
-        completedUI (b ^. completedB),
-        peerUI (b ^. peerB) ])
+        completedUI (b ^. completedBehavior),
+        peerUI (b ^. peerBehavior) ])
 
 torrentInfo :: MonadReader TorrentState m => m (UI Element)
 torrentInfo = do

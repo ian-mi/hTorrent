@@ -10,7 +10,6 @@ import Torrent.Env
 import Torrent.Event
 
 import HTorrentPrelude
-import Control.Monad.STM.Class
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Network
 import Network.Socket

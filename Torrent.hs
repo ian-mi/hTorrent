@@ -25,8 +25,7 @@ initTorrent :: MetaInfo -> PortNumber -> IO TorrentState
 initTorrent m p = do
     id <- replicateM 20 randomIO
     env <- initTorrentEnv pn (m ^. (info . piece_length))
-    conns <- newTVarIO (mapFromList [])
-    return (TorrentState m (BS.pack id) p 0 0 l pn pa env conns)
+    return (TorrentState m (BS.pack id) p 0 0 l pn pa env)
     where   ps = splitPieces (m ^. info . pieceHashes)
             pn = length ps
             pa = pieceArray pn ps
@@ -38,10 +37,6 @@ startTorrent m p = do
     tr <- trackerRequest ts
     case tr of 
         Just (_, as) -> do
-            connectPeers ts as >>= atomically . writeTVar (ts ^. peers)
+            mapM (forkIO . peerThread ts) as
             return (Just ts)
         Nothing -> return Nothing
-
-connectPeers :: TorrentState -> [SockAddr] -> IO (Map SockAddr PeerEnv)
-connectPeers ts as = mapFromList <$> mapM f as
-    where f = runKleisli (id &&& Kleisli (forkPeer ts))

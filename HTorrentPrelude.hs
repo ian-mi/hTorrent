@@ -12,6 +12,7 @@ module HTorrentPrelude (
     module Control.Monad.Morph,
     module Control.Monad.Reader,
     module Control.Monad.State,
+    module Control.Monad.STM.Class,
     module Control.Monad.Trans.Maybe,
     module Data.Conduit,
     module Data.Foldable,
@@ -23,7 +24,9 @@ module HTorrentPrelude (
 import ClassyPrelude hiding (Element, Index, cons, uncons, (<.>), hash, catch)
 import Control.Applicative
 import Control.Arrow
-import Control.Concurrent (forkIO)
+import Control.Concurrent (
+    forkIO,
+    ThreadId)
 import Control.Concurrent.STM
 import Control.Concurrent.STM.Lens
 import Control.Exception (catch)
@@ -33,12 +36,25 @@ import Control.Monad.Exception.Synchronous (
     assertT,
     Exceptional(..),
     ExceptionalT(..),
+    mapExceptionalT,
     mapExceptionT,
     throwT,
     tryT)
 import Control.Monad.Morph
 import Control.Monad.Reader (ask, MonadReader, reader, ReaderT(ReaderT), runReaderT)
-import Control.Monad.State (evalStateT, execState, get, gets, modify, MonadState, put, State, runState)
+import Control.Monad.State (
+    evalStateT,
+    execState,
+    get,
+    gets,
+    modify,
+    MonadState,
+    put,
+    State,
+    StateT,
+    runState,
+    runStateT)
+import Control.Monad.STM.Class
 import Control.Monad.Trans.Maybe
 import Data.Conduit hiding (Chunk)
 import Data.Foldable (msum)

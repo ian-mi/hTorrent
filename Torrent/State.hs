@@ -17,7 +17,6 @@ data TorrentState = TorrentState {
     _remaining :: Int,
     _numPieces :: Int,
     _pHashes :: Array Int ByteString,
-    _env :: TorrentEnv,
-    _peers :: TVar (Map SockAddr PeerEnv) }
+    _env :: TorrentEnv }
 
 $(makeLenses ''TorrentState)

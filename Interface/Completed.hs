@@ -3,7 +3,6 @@ module Interface.Completed (startCompleted, completedUI, Completed) where
 import Interface.Expand
 import HTorrentPrelude
 import Torrent.Env
-import Torrent.State
 
 import qualified Data.IntMap as IM
 import qualified Graphics.UI.Threepenny as UI
@@ -12,11 +11,11 @@ import Reactive.Threepenny
 
 type Completed = IntMap ByteString
 
-startCompleted :: TorrentState -> IO (Behavior Completed, Handler Completed)
-startCompleted ts = do
-    (completedEvent, completedHandler) <- newEvent
-    completedStart <- readTVarIO (ts ^. env . completed)
-    completedBehavior <- stepper completedStart completedEvent
+startCompleted :: ReaderT TorrentEnv IO (Behavior Completed, Handler Completed)
+startCompleted = do
+    (completedEvent, completedHandler) <- liftIO (newEvent)
+    completedStart <- viewTVarIO completed
+    completedBehavior <- liftIO (stepper completedStart completedEvent)
     return (completedBehavior, completedHandler)
 
 completedUI :: Behavior Completed -> UI Element

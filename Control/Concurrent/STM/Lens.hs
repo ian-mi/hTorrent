@@ -34,7 +34,18 @@ infixr 8 !%=
     Getting (TVar a) e (TVar a) -> (a -> a) -> m ()
 v !%= f = embedReader liftIO (v &%= f)
 
+viewTChan :: (MonadReader e m, MonadSTM m) => Getting (TChan a) e (TChan a) -> m a
+viewTChan v = view v >>= liftSTM . readTChan
+
+viewTChanIO :: (MonadReader e m, MonadIO m) => Getting (TChan a) e (TChan a) -> m a
+viewTChanIO = embedReader liftIO . viewTChan
+
 infixr 8 &-<
 (&-<) :: (MonadReader e m, MonadSTM m) =>
     Getting (TChan a) e (TChan a) -> a -> m ()
 c &-< a = view c >>= liftSTM . flip writeTChan a
+
+infixr 8 !-<
+(!-<) :: (MonadReader e m, MonadIO m) =>
+    Getting (TChan a) e (TChan a) -> a -> m ()
+c !-< a = embedReader liftIO (c &-< a)
