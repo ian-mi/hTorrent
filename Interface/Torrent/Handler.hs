@@ -14,6 +14,7 @@ import Reactive.Threepenny
 
 data TorrentHandler = TorrentHandler {
     _completedHandler :: Handler Completed,
+    _numCompletedHandler :: Handler Int,
     _peerConnectHandler :: Handler (ByteString, PeerBehavior)
 }
 $(makeLenses ''TorrentHandler)
@@ -44,8 +45,9 @@ runTorrentHandler = forever $ do
     case event of
         PieceCompleted pieceNum -> do
             h <- view (torrentHandler . completedHandler)
-            c <- viewTVarIO (torrentEnv . completed)
-            liftIO (h c)
+            viewTVarIO (torrentEnv . completed) >>= liftIO . h
+            hN <- view (torrentHandler . numCompletedHandler)
+            viewTVarIO (torrentEnv . numCompleted) >>= liftIO . hN
         PeerConnected id env -> do
             (behavior, handler) <- liftIO (mkPeerBehavior env)
             threadId <- liftIO (forkIO (handlePeer handler))

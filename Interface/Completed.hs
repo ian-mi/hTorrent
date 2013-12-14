@@ -1,4 +1,4 @@
-module Interface.Completed (startCompleted, completedUI, Completed) where
+module Interface.Completed (startCompleted, startCompletedNum, completedUI, Completed) where
 
 import Interface.Expand
 import HTorrentPrelude
@@ -13,10 +13,17 @@ type Completed = IntMap ByteString
 
 startCompleted :: ReaderT TorrentEnv IO (Behavior Completed, Handler Completed)
 startCompleted = do
-    (completedEvent, completedHandler) <- liftIO (newEvent)
+    (completedEvent, completedHandler) <- liftIO newEvent
     completedStart <- viewTVarIO completed
     completedBehavior <- liftIO (stepper completedStart completedEvent)
     return (completedBehavior, completedHandler)
+
+startCompletedNum :: ReaderT TorrentEnv IO (Behavior Int, Handler Int)
+startCompletedNum = do
+    (numCompletedE, numCompletedH) <- liftIO newEvent
+    numCompletedStart <- viewTVar numCompleted
+    numCompletedB <- liftIO (stepper numCompletedStart numCompletedE)
+    return (numCompletedB, numCompletedH)
 
 completedUI :: Behavior Completed -> UI Element
 completedUI b = do

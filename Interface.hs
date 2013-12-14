@@ -1,5 +1,7 @@
 module Interface (startInterface) where
 
+import Interface.Torrent.Info
+import Interface.Torrent.List
 import Interface.Torrent.Behavior
 import Interface.Torrent.Handler
 import Interface.Completed
@@ -7,6 +9,7 @@ import Interface.Peer
 import HTorrentPrelude
 import MetaInfo
 import Torrent.Env
+import Torrent.Info
 import Torrent.State
 
 import qualified Graphics.UI.Threepenny as UI
@@ -15,7 +18,8 @@ import Reactive.Threepenny
 
 startInterface :: TorrentState -> IO ()
 startInterface ts = do
-    (torrentBehavior, torrentHandlerEnv) <- runReaderT torrentBehavior (ts ^. env)
+    let i = ts ^. torrentInfo
+    (torrentBehavior, torrentHandlerEnv) <- runReaderT (torrentBehavior i) (ts ^. env)
     forkIO (runReaderT runTorrentHandlerInit torrentHandlerEnv)
     startGUI config (interface torrentBehavior)
     where config = defaultConfig { tpPort = 10000 }
@@ -23,24 +27,26 @@ startInterface ts = do
 interface :: TorrentBehavior -> Window -> UI ()
 interface b w = do
     UI.set UI.title "hTorrent" (return w)
-    void (getBody w #+ [
-        completedUI (b ^. completedBehavior),
-        peerUI (b ^. peerBehavior) ])
+    (torrentTable, torrentFocusB) <- torrentList [b]
+    torrentFocus <- torrentInfoFocus torrentFocusB
+    let body = UI.set style bodyStyle (getBody w)
+    void (body #+ layout torrentTable torrentFocus)
+    where bodyStyle = [ ("padding", "0"),
+                        ("margin", "0"),
+                        ("height", "100%"),
+                        ("min-height", "100%") ]
 
-torrentInfo :: MonadReader TorrentState m => m (UI Element)
-torrentInfo = do
-    t <- liftM string (view (metaInfo . info . name))
-    i <- sequence [
-        displayPieces,
-        displayPieceLength ]
-    return (t #+ [UI.ul #+ map (UI.li #+) i])
+layout :: Element -> Element -> [UI Element]
+layout torrentTable torrentInfo = [body, footer]
+    where   bodyStyle = []
+            bodyDiv = UI.set style bodyStyle UI.div
+            body = bodyDiv #+ [UI.element torrentTable]
+            footerDiv = UI.set style footerStyle UI.div
+            footer = footerDiv #+ [UI.element torrentInfo]
 
-displayPieces :: MonadReader TorrentState m => m [UI Element]
-displayPieces = do
-    p <- view numPieces
-    return [string "Pieces:", string (show p)]
-
-displayPieceLength :: MonadReader TorrentState m => m [UI Element]
-displayPieceLength = do
-    l <- view (metaInfo . info . piece_length)
-    return [string "Piece Length:", string (show l) ]
+footerStyle :: [(String, String)]
+footerStyle = [
+    ("position", "fixed"),
+    ("left", "0"),
+    ("bottom", "0"),
+    ("height", "40%") ]

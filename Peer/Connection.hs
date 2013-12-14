@@ -12,6 +12,7 @@ import Peer.RequestBuffer
 import Peer.Send
 import Piece
 import qualified Torrent.State as T
+import Torrent.Info
 
 import Data.Conduit.Network
 import Network.Socket
@@ -29,8 +30,7 @@ peerThread t a = do
     case r of
         Success () -> return ()
         Exception e -> do
-            putStrLn "Peer connection exception: "
-            print e
+            putStrLn "Peer connection exception"
     close s
 
 connectPeer :: SockAddr -> IO Socket
@@ -53,7 +53,7 @@ handlePeer t s = do
         let requestEnv = RequestEnv rs env (t ^. T.env)
         forkIO (runReaderT requestThread requestEnv)
         forkIO (runReaderT (getThread s) getEnv)
-        forkIO (runReaderT (sendThread (t ^. T.numPieces) s) sendEnv)
+        forkIO (runReaderT (sendThread (t ^. T.torrentInfo . numPieces) s) sendEnv)
         runReaderT bufferRequests bufEnv
 
 sendThread :: (MonadReader SendEnv m, MonadIO m, MonadThrow m) =>

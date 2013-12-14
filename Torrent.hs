@@ -6,6 +6,7 @@ import Peer.Env
 import Piece
 import Tracker
 import Torrent.Env
+import Torrent.Info
 import Torrent.State
 
 import HTorrentPrelude
@@ -25,11 +26,12 @@ initTorrent :: MetaInfo -> PortNumber -> IO TorrentState
 initTorrent m p = do
     id <- replicateM 20 randomIO
     env <- initTorrentEnv pn (m ^. (info . piece_length))
-    return (TorrentState m (BS.pack id) p 0 0 l pn pa env)
+    return (TorrentState i m (BS.pack id) p 0 0 l pa env)
     where   ps = splitPieces (m ^. info . pieceHashes)
             pn = length ps
             pa = pieceArray pn ps
             l = pn * m ^. info . piece_length
+            i = TorrentInfo {_torrentName = m ^. info . name, _numPieces = pn}
 
 startTorrent :: MetaInfo -> PortNumber -> IO (Maybe TorrentState)
 startTorrent m p = do

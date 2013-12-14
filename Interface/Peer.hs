@@ -1,4 +1,4 @@
-module Interface.Peer (peerUI, PeersB, PeersH) where
+module Interface.Peer (peerUI, PeersB) where
 
 import Interface.Expand
 import Interface.Peer.Behavior
@@ -13,7 +13,6 @@ import Network.Socket
 import Reactive.Threepenny
 
 type PeersB = HashMap ByteString PeerBehavior
-type PeersH = HashMap ByteString PeerHandlerEnv
 
 peerUI :: Behavior PeersB -> UI Element
 peerUI behavior = do
