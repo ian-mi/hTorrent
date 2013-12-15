@@ -2,16 +2,16 @@ module Peer.Handshake.Put where
 
 import MetaInfo
 import Peer.Handshake.Protocol
-import Torrent.State
+import Torrent.Env
 
 import HTorrentPrelude
 import Data.Binary.Put
 
-putHandshake :: ReaderT TorrentState PutM ()
+putHandshake :: ReaderT TorrentInfo PutM ()
 putHandshake = do 
     lift putProtocol
     lift (putByteString reservedBytes)
-    view (metaInfo . info . hash) >>= lift . putByteString
+    view torrentHash >>= lift . putByteString
     view peerId >>= lift . putByteString
 
 putProtocol :: Put

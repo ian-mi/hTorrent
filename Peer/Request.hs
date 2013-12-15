@@ -4,6 +4,7 @@ import Control.Concurrent.STM.Lens
 import Morphisms
 import Peer.Env
 import Peer.Message
+import Peer.State
 import Piece
 import Torrent.Env
 
@@ -16,8 +17,8 @@ import qualified Data.Set as S
 
 data RequestEnv = RequestEnv {
     _requests :: TQueue ChunkInd,
-    _peer :: PeerEnv,
-    _torrent :: TorrentEnv }
+    _peer :: PeerEnv
+}
 $(makeLenses ''RequestEnv)
 
 data RequestState = RequestState {
@@ -51,9 +52,9 @@ nextRequest = do
 
 waitRequest :: (MonadReader RequestEnv m, MonadSTM m) => ChunkInd -> m ()
 waitRequest i = do
-    viewTVar (peer . remoteState . choked) >>= liftSTM . guard . not
-    viewTVar (peer . pendingRequests) >>= liftSTM . guard . (< numPipeline) . S.size
-    peer . pendingRequests &%= S.insert i
+    viewTVar (peer . peerState . remoteState . choked) >>= liftSTM . guard . not
+    viewTVar (peer . peerState . pendingRequests) >>= liftSTM . guard . (< numPipeline) . S.size
+    peer . peerState . pendingRequests &%= S.insert i
     view requests >>= liftSTM . flip writeTQueue i
 
 nextPiece ::
@@ -61,21 +62,21 @@ nextPiece ::
     => m ()
 nextPiece = do
     ps <- interestedPieces 
-    i <- viewTVar (peer . localState . interested)
+    i <- viewTVar (peer . peerState . localState . interested)
     case listToMaybe ps of
         Just (p, b) -> do
-            unless i (peer . localState . interested &.= True)
+            unless i (peer . peerState . localState . interested &.= True)
             put (Just (RequestState p b))
         Nothing -> do
             liftM (i ||) (gets isJust) >>= liftSTM . guard
-            peer . localState . interested &.= False
+            peer . peerState . localState . interested &.= False
             put Nothing
 
 interestedPieces :: (MonadReader RequestEnv m, MonadSTM m) =>
     m [(Int, TVar PieceBuffer)]
 interestedPieces = do
-    d <- viewTVar (torrent . downloading)
-    i <- liftM (flip filterKeys d . flip IS.member) (viewTVar (peer . pieces))
+    d <- viewTVar (peer . torrentEnv . downloading)
+    i <- liftM (flip filterKeys d . flip IS.member) (viewTVar (peer . peerState . pieces))
     liftSTM (filterM (liftM (not . full) . readTVar . snd) (IM.toList i))
 
 filterKeys :: (Int -> Bool) -> IntMap a -> IntMap a

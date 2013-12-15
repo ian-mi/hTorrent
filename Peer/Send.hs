@@ -1,20 +1,23 @@
-module Peer.Send (SendEnv(SendEnv), SendState(..), messages) where
+module Peer.Send (SendEnv(SendEnv), sendThread) where
 
 import Peer.Env
 import Peer.Message
+import Peer.Message.Put
+import Peer.State
 import Morphisms
 import Torrent.Env
 
 import HTorrentPrelude
 import Control.Monad.STM.Class
 import qualified Data.ByteString as BS
+import Data.Conduit.Network
 import qualified Data.IntMap as IM
+import Network.Socket
 
 data SendEnv = SendEnv {
     _requests :: TQueue ChunkInd,
     _peerRequests :: TMVar ChunkInd,
-    _peer :: PeerEnv,
-    _torrent :: TorrentEnv }
+    _peer :: PeerEnv }
 $(makeLenses ''SendEnv)
 
 data SendState = SendState {
@@ -23,6 +26,12 @@ data SendState = SendState {
 $(makeLenses ''SendState)
 
 data Message = InterestedM | RequestM ChunkInd | PeerRequestM ChunkInd
+
+sendThread :: (MonadReader SendEnv m, MonadIO m, MonadThrow m) => Socket -> m ()
+sendThread s = do
+    p <- view (peer . torrentEnv . torrentInfo . numPieces)
+    evalStateT (messages $= putMessages p $$ sinkSocket s) st
+    where st = SendState { _curInterested = False, _curChoked = True }
 
 messages :: (MonadState SendState m, MonadReader SendEnv m, MonadIO m) =>
     Source m PeerMessage
@@ -35,9 +44,8 @@ sendMessage InterestedM = do
     yield (if i then InterestedMessage else UninterestedMessage)
 sendMessage (RequestM i) = yield (RequestMessage i)
 sendMessage (PeerRequestM c@(ChunkInd p i l)) = do
-    d <- IM.lookup p <$> viewTVarIO (torrent . completed)
+    d <- IM.lookup p <$> viewTVarIO (peer . torrentEnv . completed)
     maybe (return ()) (yield . PieceMessage . Chunk c . BS.take l . BS.drop i) d
-    
 
 waitMessage :: (MonadState SendState m, MonadReader SendEnv m, MonadIO m) =>
     m Message
@@ -50,7 +58,7 @@ waitInterested :: (MonadReader SendEnv m, MonadState SendState m, MonadSTM m)
     => m ()
 waitInterested = do
     i <- use curInterested
-    i' <- viewTVar (peer . remoteState . interested)
+    i' <- viewTVar (peer . peerState . remoteState . interested)
     liftSTM (guard (not (i == i')))
     curInterested .= i'
 

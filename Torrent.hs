@@ -6,8 +6,6 @@ import Peer.Env
 import Piece
 import Tracker
 import Torrent.Env
-import Torrent.Info
-import Torrent.State
 
 import HTorrentPrelude
 import Data.Array
@@ -22,23 +20,30 @@ splitPieces = unfoldr f
 pieceArray :: Int -> [ByteString] -> Array Int ByteString
 pieceArray n bs = listArray (1, n) bs
 
-initTorrent :: MetaInfo -> PortNumber -> IO TorrentState
+initTorrent :: MetaInfo -> PortNumber -> IO TorrentEnv
 initTorrent m p = do
     id <- replicateM 20 randomIO
-    env <- initTorrentEnv pn (m ^. (info . piece_length))
-    return (TorrentState i m (BS.pack id) p 0 0 l pa env)
+    let torrentInfo = TorrentInfo {
+        _torrentName = m ^. info . name,
+        _torrentHash = m ^. info . hash,
+        _tracker = m ^. announce,
+        _numPieces = pn,
+        _pieceLength = m ^. info . piece_length, _peerId = BS.pack id,
+        _portNumber = p,
+        _uploaded = 0,
+        _pieceHash = pa
+    }
+    initTorrentEnv torrentInfo
     where   ps = splitPieces (m ^. info . pieceHashes)
             pn = length ps
             pa = pieceArray pn ps
-            l = pn * m ^. info . piece_length
-            i = TorrentInfo {_torrentName = m ^. info . name, _numPieces = pn}
 
-startTorrent :: MetaInfo -> PortNumber -> IO (Maybe TorrentState)
+startTorrent :: MetaInfo -> PortNumber -> IO (Maybe TorrentEnv)
 startTorrent m p = do
-    ts <- initTorrent m p
-    tr <- trackerRequest ts
+    env <- initTorrent m p
+    tr <- trackerRequest (env ^. torrentInfo)
     case tr of 
         Just (_, as) -> do
-            mapM (forkIO . peerThread ts) as
-            return (Just ts)
+            mapM (forkIO . peerThread env) as
+            return (Just env)
         Nothing -> return Nothing

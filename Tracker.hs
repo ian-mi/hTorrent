@@ -1,8 +1,7 @@
 module Tracker where
 
 import BEncode
-import MetaInfo
-import Torrent.State
+import Torrent.Env
 import Peer
 import CompactPeer
 
@@ -14,18 +13,18 @@ import Network.HTTP.Types.URI
 import Network.Socket
 import Network.URI
 
-formatRequest :: TorrentState -> Request ByteString
-formatRequest s = mkRequest GET uri
+formatRequest :: TorrentInfo -> Request ByteString
+formatRequest i = mkRequest GET uri
     where   query = renderSimpleQuery True [
-                ("info_hash", s ^. metaInfo . info . hash),
-                ("peer_id", s ^. peerId),
-                ("port", fromString (show (s ^. portNumber))),
-                ("uploaded", fromString (show (s ^. uploaded))),
-                ("downloaded", fromString (show (s ^. downloaded))),
-                ("left", fromString (show (s ^. remaining))),
+                ("info_hash", i ^. torrentHash),
+                ("peer_id", i ^. peerId),
+                ("port", fromString (show (i ^. portNumber))),
+                ("uploaded", fromString (show (i ^. uploaded))),
+                ("downloaded", fromString (show 0)),
+                ("left", fromString (show (i ^. numPieces * i ^. pieceLength))),
                 ("compact", "1"),
                 ("event", "started") ]
-            uri = (s ^. metaInfo . announce) {uriQuery = CBS.unpack query}
+            uri = (i ^. tracker) {uriQuery = CBS.unpack query}
 
 parseResponse :: BEncode -> Maybe (Int, [Peer])
 parseResponse b = (,) <$> i <*> ps
@@ -40,8 +39,8 @@ compactResponse b = (,) <$> i <*> ps
 parseCompactResponse :: ByteString -> Maybe (Int, [SockAddr])
 parseCompactResponse = (>>= compactResponse) . maybeResult . parse parseBEncode
 
-getResponse :: TorrentState -> IO ByteString
-getResponse ts = simpleHTTP (formatRequest ts) >>= getResponseBody
+getResponse :: TorrentInfo -> IO ByteString
+getResponse i = simpleHTTP (formatRequest i) >>= getResponseBody
 
-trackerRequest :: TorrentState -> IO (Maybe (Int, [SockAddr]))
+trackerRequest :: TorrentInfo -> IO (Maybe (Int, [SockAddr]))
 trackerRequest = fmap parseCompactResponse . getResponse

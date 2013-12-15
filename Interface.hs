@@ -9,17 +9,15 @@ import Interface.Peer
 import HTorrentPrelude
 import MetaInfo
 import Torrent.Env
-import Torrent.Info
-import Torrent.State
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
 import Reactive.Threepenny
 
-startInterface :: TorrentState -> IO ()
-startInterface ts = do
-    let i = ts ^. torrentInfo
-    (torrentBehavior, torrentHandlerEnv) <- runReaderT (torrentBehavior i) (ts ^. env)
+startInterface :: TorrentEnv -> IO ()
+startInterface env = do
+    let i = env
+    (torrentBehavior, torrentHandlerEnv) <- runReaderT torrentBehavior env
     forkIO (runReaderT runTorrentHandlerInit torrentHandlerEnv)
     startGUI config (interface torrentBehavior)
     where config = defaultConfig { tpPort = 10000 }

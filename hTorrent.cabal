@@ -18,7 +18,10 @@ executable hTorrent
         TemplateHaskell,
         FlexibleContexts,
         TupleSections,
-        NoImplicitPrelude
+        NoImplicitPrelude,
+        MultiParamTypeClasses,
+        FlexibleInstances,
+        FunctionalDependencies
     build-depends:
         base >=4.6 && <4.7,
         lens >=3.10 && <3.11,

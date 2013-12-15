@@ -32,7 +32,7 @@ peers m = m ^!! ifolded . withIndex . act (uncurry peerInterface)
 peerInterface :: ByteString -> PeerBehavior -> UI Element
 peerInterface id b = UI.tr #+ [addressColor, interested, choked]
     where   addressColor = sink style (addressStyle <$> remoteChokedB) address
-            address = UI.set text (show id) UI.td
+            address = UI.set text (show (b ^. peerAddress)) UI.td
             interested = sink text (showInterested <$> remoteInterestedB) UI.td
             choked = sink text (showChoked <$> remoteChokedB) UI.td
             remoteInterestedB = b ^. remoteStateB . interestedB

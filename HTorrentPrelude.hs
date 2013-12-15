@@ -8,7 +8,6 @@ module HTorrentPrelude (
     module Control.Exception,
     module Control.Lens,
     module Control.Monad,
-    module Control.Monad.Exception.Synchronous,
     module Control.Monad.Morph,
     module Control.Monad.Reader,
     module Control.Monad.State,
@@ -19,9 +18,20 @@ module HTorrentPrelude (
     module Data.IntSet,
     module Data.IntMap,
     module Data.List,
-    module Data.Maybe ) where
+    module Data.Maybe,
+    module HTorrent.Exception ) where
 
-import ClassyPrelude hiding (Element, Index, cons, uncons, (<.>), hash, catch)
+import ClassyPrelude hiding (
+    Element,
+    Index,
+    cons,
+    uncons,
+    (<.>),
+    hash,
+    catch,
+    assert,
+    bracket,
+    try)
 import Control.Applicative
 import Control.Arrow
 import Control.Concurrent (
@@ -32,14 +42,6 @@ import Control.Concurrent.STM.Lens
 import Control.Exception (catch)
 import Control.Lens
 import Control.Monad (guard, liftM2)
-import Control.Monad.Exception.Synchronous (
-    assertT,
-    Exceptional(..),
-    ExceptionalT(..),
-    mapExceptionalT,
-    mapExceptionT,
-    throwT,
-    tryT)
 import Control.Monad.Morph
 import Control.Monad.Reader (ask, MonadReader, reader, ReaderT(ReaderT), runReaderT)
 import Control.Monad.State (
@@ -62,3 +64,4 @@ import Data.IntSet (IntSet)
 import Data.IntMap (IntMap)
 import Data.List (foldl, unfoldr)
 import Data.Maybe
+import HTorrent.Exception

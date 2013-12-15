@@ -2,7 +2,7 @@ module Interface.Torrent.Entry (torrentEntry) where
 
 import HTorrentPrelude
 import Interface.Torrent.Behavior
-import Torrent.Info
+import Torrent.Env
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core

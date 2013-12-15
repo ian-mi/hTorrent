@@ -5,7 +5,6 @@ import Interface.Peer.Behavior
 import Interface.Torrent.Handler
 import HTorrentPrelude
 import Torrent.Env
-import Torrent.Info
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
@@ -19,9 +18,8 @@ data TorrentBehavior = TorrentBehavior {
 }
 $(makeLenses ''TorrentBehavior)
 
-torrentBehavior :: TorrentInfo ->
-    ReaderT TorrentEnv IO (TorrentBehavior, TorrentHandlerEnv)
-torrentBehavior i = do
+torrentBehavior :: ReaderT TorrentEnv IO (TorrentBehavior, TorrentHandlerEnv)
+torrentBehavior = do
     chan <- view torrentEvents >>= liftIO . atomically . dupTChan
     env <- ask
     (completedB, completedH) <- startCompleted
@@ -31,7 +29,7 @@ torrentBehavior i = do
     (peerConnectE, peerConnectH) <- liftIO newEvent
     peersB <- accumB peersInit (uncurry insertMap <$> peerConnectE)
     let torrentBehavior = TorrentBehavior {
-        _torrentInfoB = i,
+        _torrentInfoB = env ^. torrentInfo,
         _completedBehavior = completedB,
         _numCompletedBehavior = numCompletedB,
         _peerBehavior = peersB

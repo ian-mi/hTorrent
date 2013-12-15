@@ -1,9 +1,8 @@
 module Torrent.Event where
 
 import HTorrentPrelude
-import Peer.Env
-import Peer.Event
+import Peer.State
 
 data TorrentEvent =
     PieceCompleted Int |
-    PeerConnected ByteString PeerEnv
+    PeerConnected ByteString PeerState

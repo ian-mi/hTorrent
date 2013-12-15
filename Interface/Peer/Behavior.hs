@@ -2,10 +2,11 @@ module Interface.Peer.Behavior where
 
 import Interface.Peer.Handler
 import HTorrentPrelude
-import Peer.Env
+import Peer.State
 
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Core
+import Network.Socket
 import Reactive.Threepenny
 
 data PeerStateB = PeerStateB {
@@ -15,23 +16,25 @@ data PeerStateB = PeerStateB {
 $(makeLenses ''PeerStateB)
 
 data PeerBehavior = PeerBehavior {
+    _peerAddress :: SockAddr,
     _localStateB :: PeerStateB,
     _remoteStateB :: PeerStateB
 }
 $(makeLenses ''PeerBehavior)
 
-mkPeersBehavior :: HashMap ByteString PeerEnv ->
+mkPeersBehavior :: HashMap ByteString PeerState ->
     IO (HashMap ByteString PeerBehavior, HashMap ByteString PeerHandlerEnv)
 mkPeersBehavior ps = do
     peerBH <- mapMOf traverse mkPeerBehavior ps
     return (fst <$> peerBH, snd <$> peerBH)
 
-mkPeerBehavior :: PeerEnv -> IO (PeerBehavior, PeerHandlerEnv)
-mkPeerBehavior peerEnv = do
-    chan <- atomically (dupTChan (peerEnv ^. peerEvents))
-    (localB, localH) <- mkPeerStateB (peerEnv ^. localState)
-    (remoteB, remoteH) <- mkPeerStateB (peerEnv ^. remoteState)
+mkPeerBehavior :: PeerState -> IO (PeerBehavior, PeerHandlerEnv)
+mkPeerBehavior s = do
+    chan <- atomically (dupTChan (s ^. events))
+    (localB, localH) <- mkPeerStateB (s ^. localState)
+    (remoteB, remoteH) <- mkPeerStateB (s ^. remoteState)
     let peerB = PeerBehavior {
+        _peerAddress = s ^. address,
         _localStateB = localB,
         _remoteStateB = remoteB
     }

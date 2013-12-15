@@ -4,6 +4,7 @@ import Peer.Env
 import Peer.Event
 import Peer.Message
 import Peer.Message.Get
+import Peer.State
 import Piece
 import Morphisms
 import Torrent.Env
@@ -17,8 +18,8 @@ import Network.Socket
 data GetEnv = GetEnv {
     _peerRequests :: TQueue ChunkInd,
     _peerCancelled :: TQueue ChunkInd,
-    _peer :: PeerEnv,
-    _torrent :: TorrentEnv }
+    _peer :: PeerEnv
+}
 $(makeLenses ''GetEnv)
 
 getThread :: Socket -> ReaderT GetEnv IO ()
@@ -29,28 +30,24 @@ handleMessages = CL.mapM_ handlePeerMessage
 
 handlePeerMessage :: PeerMessage -> ReaderT GetEnv IO ()
 handlePeerMessage ChokeMessage = do
-    peer . remoteState . choked !.= True
-    events <- view (peer . peerEvents)
-    liftIO (atomically (writeTChan events (ChokedRemote True)))
+    peer . peerState . remoteState . choked !.= True
+    peer . peerState . events !-< ChokedRemote True
 handlePeerMessage UnchokeMessage = do
-    peer . remoteState . choked !.= False
-    events <- view (peer . peerEvents)
-    liftIO (atomically (writeTChan events (ChokedRemote False)))
+    peer . peerState . remoteState . choked !.= False
+    peer . peerState . events !-< ChokedRemote False
 handlePeerMessage InterestedMessage = do
-    peer . remoteState . interested !.= True
-    events <- view (peer . peerEvents)
-    liftIO (atomically (writeTChan events (InterestedRemote True)))
+    peer . peerState . remoteState . interested !.= True
+    peer . peerState . events !-< InterestedRemote True
 handlePeerMessage UninterestedMessage = do
-    peer . remoteState . interested !.= False
-    events <- view (peer . peerEvents)
-    liftIO (atomically (writeTChan events (InterestedRemote False)))
-handlePeerMessage (HaveMessage i) = peer . pieces !%= insertSet i
-handlePeerMessage (BitfieldMessage b) = peer . pieces !.= b
-handlePeerMessage (RequestMessage r) = 
+    peer . peerState . remoteState . interested !.= False
+    peer . peerState . events !-< InterestedRemote False
+handlePeerMessage (HaveMessage i) = peer . peerState . pieces !%= insertSet i
+handlePeerMessage (BitfieldMessage b) = peer . peerState . pieces !.= b
+handlePeerMessage (RequestMessage r) =
     view peerRequests >>= liftIO . atomically . flip writeTQueue r
 handlePeerMessage (PieceMessage (Chunk i d)) = do
-    peer . pendingRequests !%= deleteSet i
-    hoist atomically (magnify torrent (addPiece i d))
+    peer . peerState . pendingRequests !%= deleteSet i
+    hoist atomically (magnify (peer . torrentEnv) (addPiece i d))
 handlePeerMessage (CancelMessage c) = 
     view peerCancelled >>= liftIO . atomically . flip writeTQueue c
 

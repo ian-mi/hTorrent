@@ -1,62 +1,55 @@
 module Peer.Connection (peerThread) where
 
 import HTorrentPrelude
-import MetaInfo
 import Morphisms
 import Peer.Env
 import Peer.Get
 import Peer.Handshake
-import Peer.Message.Put
 import Peer.Request
 import Peer.RequestBuffer
 import Peer.Send
+import Peer.State
 import Piece
-import qualified Torrent.State as T
-import Torrent.Info
+import Torrent.Env
 
-import Data.Conduit.Network
 import Network.Socket
 
-data PeerConnectionException =
-    FailedHandshake HandshakeException
+data PeerConnectionExcept =
+    FailedHandshake HandshakeExcept
     deriving Show
 
-type ConnectionIO a = ExceptionalT PeerConnectionException IO a
-
-peerThread :: T.TorrentState -> SockAddr -> IO ()
+peerThread :: TorrentEnv -> SockAddr -> IO ()
 peerThread t a = do
-    s <- connectPeer a
-    r <- tryT (handlePeer t s)
+    st <- initPeerState a
+    r <- try (hoist (flip runReaderT (PeerEnv t st)) runPeer)
     case r of
         Success () -> return ()
         Exception e -> do
             putStrLn "Peer connection exception"
-    close s
 
-connectPeer :: SockAddr -> IO Socket
-connectPeer a = do
-    s <- socket AF_INET Stream defaultProtocol
-    connect s a
+runPeer :: ExceptT PeerConnectionExcept (ReaderT PeerEnv IO) ()
+runPeer = bracket (lift connectPeer) (lift . lift . close) handlePeer
+
+connectPeer :: ReaderT PeerEnv IO Socket
+connectPeer = do
+    s <- liftIO (socket AF_INET Stream defaultProtocol)
+    view (peerState . address) >>= liftIO . connect s
     return s
 
-handlePeer :: T.TorrentState -> Socket -> ConnectionIO ()
-handlePeer t s = do
-    env <- mapExceptionT FailedHandshake (handshake t s)
-    lift $ do
+handlePeer :: Socket -> ExceptT PeerConnectionExcept (ReaderT PeerEnv IO) ()
+handlePeer s = do
+    mapExceptT FailedHandshake (handshake s)
+    env <- ask
+    lift $ lift $ do
         prs <- newTQueueIO
         pcd <- newTQueueIO
         rs <- newTQueueIO
         prsb <- newEmptyTMVarIO
-        let getEnv = GetEnv prs pcd env (t ^. T.env)
-        let sendEnv = SendEnv rs prsb env (t ^. T.env)
+        let getEnv = GetEnv prs pcd env
+        let sendEnv = SendEnv rs prsb env
         let bufEnv = BufEnv prs pcd prsb
-        let requestEnv = RequestEnv rs env (t ^. T.env)
+        let requestEnv = RequestEnv rs env
         forkIO (runReaderT requestThread requestEnv)
         forkIO (runReaderT (getThread s) getEnv)
-        forkIO (runReaderT (sendThread (t ^. T.torrentInfo . numPieces) s) sendEnv)
+        forkIO (runReaderT (sendThread  s) sendEnv)
         runReaderT bufferRequests bufEnv
-
-sendThread :: (MonadReader SendEnv m, MonadIO m, MonadThrow m) =>
-    Int -> Socket -> m ()
-sendThread p s = evalStateT (messages $= putMessages p $$ sinkSocket s) st
-    where st = SendState { _curInterested = False, _curChoked = True }
