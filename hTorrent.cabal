@@ -21,10 +21,12 @@ executable hTorrent
         NoImplicitPrelude,
         MultiParamTypeClasses,
         FlexibleInstances,
-        FunctionalDependencies
+        FunctionalDependencies,
+        DeriveDataTypeable,
+        ViewPatterns
     build-depends:
         base >=4.6 && <4.7,
-        lens >=3.10 && <3.11,
+        lens >= 4.0 && < 4.1,
         cryptohash >=0.11 && <0.12,
         bytestring >=0.10 && <0.11,
         network >=2.4 && <2.5,
@@ -34,7 +36,7 @@ executable hTorrent
         HTTP >=4000.2 && <4000.3,
         stm >=2.4 && <2.5,
         threepenny-gui >=0.4 && <0.5,
-        attoparsec >=0.10 && <0.11,
+        attoparsec >=0.10 && <0.12,
         http-types >=0.8 && <0.9,
         monad-stm >=0.1 && <0.2,
         utf8-string >=0.3 && <0.4,
@@ -47,7 +49,9 @@ executable hTorrent
         attoparsec-conduit >=1.0 && <1.1,
         binary-conduit >=1.2 && <1.3,
         mtl >= 2.1 && < 2.2,
-        classy-prelude >= 0.6 && < 0.7,
+        classy-prelude >= 0.6 && < 0.8,
         explicit-exception >= 0.1 && < 0.2,
-        mmorph >= 1.0 && < 1.1
+        mmorph >= 1.0 && < 1.1,
+        mmap >= 0.5 && < 0.6,
+        async >= 2.0 && < 2.1
     default-language: Haskell2010
