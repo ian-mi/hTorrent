@@ -1,5 +1,7 @@
-module Peer.Message.Get (getMessages) where
+module Peer.Message.Get (getPacket, getMessage) where
 
+import Data.Chunk
+import Peer.Get.Exception
 import Peer.Message
 
 import HTorrentPrelude
@@ -7,13 +9,11 @@ import Data.Binary.Get
 import Data.Bits.Lens
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Serialization.Binary
+import Data.Interval
 import Data.IntSet.Lens
 import qualified Data.ByteString as BS
 import Data.ByteString.Lens
 import qualified Data.ByteString.Lazy as LBS
-
-getMessages :: MonadThrow m => Conduit ByteString m PeerMessage
-getMessages = conduitGet getPacket =$= CL.map (runGet getMessage)
 
 getPacket :: Get LBS.ByteString
 getPacket = getInt >>= getLazyByteString . fromIntegral
@@ -31,18 +31,23 @@ getMessageData Interested = return InterestedMessage
 getMessageData Uninterested = return UninterestedMessage
 getMessageData Have = HaveMessage <$> getInt
 getMessageData Bitfield = BitfieldMessage <$> getBitfield
-getMessageData Request = RequestMessage <$> getChunkInd
-getMessageData Piece = PieceMessage <$> getChunk
-getMessageData Cancel = CancelMessage <$> getChunkInd
+getMessageData Request = RequestMessage <$> getChunk
+getMessageData Piece = do
+    p <- getInt
+    a <- getInt
+    d <- LBS.toStrict <$> getRemainingLazyByteString
+    let c = Chunk p (Interval a (a + length d - 1))
+    return (PieceMessage c d)
+getMessageData Cancel = CancelMessage <$> getChunk
 
 getChunk :: Get Chunk
-getChunk = do   i <- getInt
-                b <- getInt
-                p <- LBS.toStrict <$> getRemainingLazyByteString
-                return (Chunk (ChunkInd i b (BS.length p)) p)
+getChunk = Chunk <$> getInt <*> getInterval
 
-getChunkInd :: Get ChunkInd
-getChunkInd = ChunkInd <$> getInt <*> getInt <*> getInt
+getInterval :: Get Interval
+getInterval = do
+    a <- getInt
+    l <- getInt
+    return (Interval a (a + l - 1))
 
 getInt :: Get Int
 getInt = fromIntegral <$> getWord32be

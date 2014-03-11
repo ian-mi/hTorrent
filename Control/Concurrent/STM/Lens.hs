@@ -40,6 +40,12 @@ viewTChan v = view v >>= liftSTM . readTChan
 viewTChanIO :: (MonadReader e m, MonadIO m) => Getting (TChan a) e (TChan a) -> m a
 viewTChanIO = embedReader liftIO . viewTChan
 
+viewTQueue :: (MonadReader e m, MonadSTM m) => Getting (TQueue a) e (TQueue a) -> m a
+viewTQueue v = view v >>= liftSTM . readTQueue
+
+viewTQueueIO :: (MonadReader e m, MonadIO m) => Getting (TQueue a) e (TQueue a) -> m a
+viewTQueueIO = embedReader liftIO . viewTQueue
+
 infixr 8 &-<
 (&-<) :: (MonadReader e m, MonadSTM m) =>
     Getting (TChan a) e (TChan a) -> a -> m ()
@@ -49,3 +55,13 @@ infixr 8 !-<
 (!-<) :: (MonadReader e m, MonadIO m) =>
     Getting (TChan a) e (TChan a) -> a -> m ()
 c !-< a = embedReader liftIO (c &-< a)
+
+infixr 8 &<<
+(&<<) :: (MonadReader e m, MonadSTM m) =>
+    Getting (TQueue a) e (TQueue a) -> a -> m ()
+c &<< a = view c >>= liftSTM . flip writeTQueue a
+
+infixr 8 !<<
+(!<<) :: (MonadReader e m, MonadIO m) =>
+    Getting (TQueue a) e (TQueue a) -> a -> m ()
+c !<< a = embedReader liftIO (c &<< a)

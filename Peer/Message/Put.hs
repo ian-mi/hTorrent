@@ -1,5 +1,6 @@
 module Peer.Message.Put where
 
+import Data.Chunk
 import Peer.Message
 
 import HTorrentPrelude
@@ -8,6 +9,7 @@ import Data.Bits
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Serialization.Binary
+import Data.Interval
 import qualified Data.IntSet as IS
 import Data.Monoid
 
@@ -24,19 +26,21 @@ putMessage _ InterestedMessage = putMessageType Interested
 putMessage _ UninterestedMessage = putMessageType Uninterested
 putMessage _ (HaveMessage i) = putMessageType Have >> putInt i
 putMessage p (BitfieldMessage b) = putMessageType Bitfield >> putBitfield p b
-putMessage _ (RequestMessage i) = putMessageType Request >> putChunkInd i
-putMessage _ (PieceMessage (Chunk (ChunkInd p i _) d)) = do
+putMessage _ (RequestMessage c) = putMessageType Request >> putChunk c
+putMessage _ (PieceMessage c d) = do
     putMessageType Piece
-    putInt p
-    putInt i
+    putChunk c
     putByteString d
-putMessage _ (CancelMessage i) = putMessageType Cancel >> putChunkInd i
+putMessage _ (CancelMessage c) = putMessageType Cancel >> putChunk c
 
 putMessageType :: MessageType -> Put
 putMessageType = putWord8 . fromIntegral . fromEnum
 
-putChunkInd :: ChunkInd -> Put
-putChunkInd (ChunkInd p i l) = putInt p >> putInt i >> putInt l
+putInterval :: Interval -> Put
+putInterval (Interval a b) = putInt a >> putInt (b - a + 1)
+
+putChunk :: Chunk -> Put
+putChunk (Chunk p i) = putInt p >> putInterval i
 
 putBitfield :: Int -> IntSet -> Put
 putBitfield p b = mapM_ (putWord8 . fromBits) bits

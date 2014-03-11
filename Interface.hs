@@ -20,10 +20,11 @@ startInterface env = do
     (torrentBehavior, torrentHandlerEnv) <- runReaderT torrentBehavior env
     forkIO (runReaderT runTorrentHandlerInit torrentHandlerEnv)
     startGUI config (interface torrentBehavior)
-    where config = defaultConfig { tpPort = 10000 }
+    where config = defaultConfig {tpPort = 10000, tpStatic = Just "static"}
 
 interface :: TorrentBehavior -> Window -> UI ()
 interface b w = do
+    UI.addStyleSheet w "hTorrent.css"
     UI.set UI.title "hTorrent" (return w)
     (torrentTable, torrentFocusB) <- torrentList [b]
     torrentFocus <- torrentInfoFocus torrentFocusB
@@ -47,4 +48,5 @@ footerStyle = [
     ("position", "fixed"),
     ("left", "0"),
     ("bottom", "0"),
-    ("height", "40%") ]
+    ("height", "40%"),
+    ("width", "100%") ]

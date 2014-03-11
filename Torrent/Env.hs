@@ -1,12 +1,16 @@
 module Torrent.Env where
 
+import Files
+import Files.MMap
+import MetaInfo
 import Peer.State
-import Piece
 import Torrent.Event
+import Torrent.State.Downloading
 
 import Data.Array
 import HTorrentPrelude
 import qualified Data.IntMap as IM
+import Data.Isometry
 import Network.URI
 import Network.Socket
 
@@ -19,7 +23,8 @@ data TorrentInfo = TorrentInfo {
     _peerId :: ByteString,
     _portNumber :: PortNumber,
     _uploaded :: Int,
-    _pieceHash :: Array Int ByteString
+    _pieceHash :: Array Int ByteString,
+    _files :: Piecewise FileChunk
 }
 $(makeLenses ''TorrentInfo)
 
@@ -27,7 +32,7 @@ data TorrentEnv = TorrentEnv {
     _torrentInfo :: TorrentInfo,
     _completed :: TVar (IntMap ByteString),
     _numCompleted :: TVar Int,
-    _downloading :: TVar (IntMap (TVar PieceBuffer)),
+    _downloading :: TVar Downloading,
     _peers :: TVar (HashMap ByteString PeerState),
     _torrentEvents :: TChan TorrentEvent
 }
@@ -35,9 +40,9 @@ $(makeLenses ''TorrentEnv)
 
 initTorrentEnv :: TorrentInfo -> IO TorrentEnv
 initTorrentEnv i = do
-    c <- newTVarIO IM.empty
+    c <- newTVarIO mempty
     nC <- newTVarIO 0
-    d <- newDownloading i
+    d <- initDownloading (i ^. numPieces) (i ^. pieceLength) (i ^. files) >>= newTVarIO
     ps <- newTVarIO mempty
     events <- newBroadcastTChanIO
     return TorrentEnv {
@@ -48,9 +53,3 @@ initTorrentEnv i = do
         _peers = ps,
         _torrentEvents = events
     }
-
-newDownloading :: TorrentInfo -> IO (TVar (IntMap (TVar PieceBuffer)))
-newDownloading info = do
-    mapM f [0 .. info ^. numPieces - 1] >>= newTVarIO . IM.fromList
-    where   f i = (i,) <$> newTVarIO (emptyBuffer (info ^. pieceLength))
-            n = info ^. numPieces

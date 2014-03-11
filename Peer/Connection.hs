@@ -9,9 +9,10 @@ import Peer.Request
 import Peer.RequestBuffer
 import Peer.Send
 import Peer.State
-import Piece
+import Peer.Message
 import Torrent.Env
 
+import Control.Concurrent.Async
 import Network.Socket
 
 data PeerConnectionExcept =
@@ -22,10 +23,7 @@ peerThread :: TorrentEnv -> SockAddr -> IO ()
 peerThread t a = do
     st <- initPeerState a
     r <- try (hoist (flip runReaderT (PeerEnv t st)) runPeer)
-    case r of
-        Success () -> return ()
-        Exception e -> do
-            putStrLn "Peer connection exception"
+    return ()
 
 runPeer :: ExceptT PeerConnectionExcept (ReaderT PeerEnv IO) ()
 runPeer = bracket (lift connectPeer) (lift . lift . close) handlePeer
@@ -48,8 +46,10 @@ handlePeer s = do
         let getEnv = GetEnv prs pcd env
         let sendEnv = SendEnv rs prsb env
         let bufEnv = BufEnv prs pcd prsb
-        let requestEnv = RequestEnv rs env
-        forkIO (runReaderT requestThread requestEnv)
-        forkIO (runReaderT (getThread s) getEnv)
-        forkIO (runReaderT (sendThread  s) sendEnv)
-        runReaderT bufferRequests bufEnv
+        threads <- mapM async [
+            runReaderT (requestThread rs) env,
+            getThread getEnv s,
+            runReaderT (sendThread  s) sendEnv,
+            runReaderT bufferRequests bufEnv ]
+        waitAnyCancel threads
+    return ()

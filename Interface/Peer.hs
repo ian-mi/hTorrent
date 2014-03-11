@@ -15,10 +15,7 @@ import Reactive.Threepenny
 type PeersB = HashMap ByteString PeerBehavior
 
 peerUI :: Behavior PeersB -> UI Element
-peerUI behavior = do
-    name <- string "Peers"
-    peerTable <- sink updatePeersAttr behavior UI.table
-    expand name [peerTable]
+peerUI behavior = sink updatePeersAttr behavior UI.table
     where updatePeersAttr = mkWriteAttr updatePeers
 
 updatePeers :: PeersB -> Element -> UI ()

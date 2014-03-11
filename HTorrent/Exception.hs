@@ -31,6 +31,13 @@ instance MonadReader r m => MonadReader r (E.ExceptionalT e m) where
     local f = E.ExceptionalT . local f . E.runExceptionalT
     reader = lift . reader
 
+instance MonadIO m => MonadIO (E.ExceptionalT e m) where
+    liftIO = lift . liftIO
+
+instance (Show e, Show a) => Show (Except e a) where
+    show (Success a) = "Success: " ++ show a
+    show (Exception e) = "Exception: " ++ show e
+
 assert :: MonadExcept e m => e -> Bool -> m ()
 assert e p = unless p (throw e)
 

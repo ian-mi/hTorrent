@@ -1,35 +1,35 @@
-module Piece(PieceBuffer, addData, allocNext, full, emptyBuffer, complete) where
+module Piece where
 
-import Alloc
-import Morphisms
-
+import Files
+import Files.MMap
 import HTorrentPrelude
-import qualified Data.IntMap.Strict as IM
-import qualified Data.ByteString as BS
+import Torrent.Env
+import Torrent.Event
+import Torrent.State.Downloading
 
-data PieceBuffer = PieceBuffer {    _pieceSize :: Int,
-                                    _chunks :: IntMap ByteString,
-                                    _requested :: IntMap Int }
-$(makeLenses ''PieceBuffer)
+import Crypto.Hash.SHA1
+import Data.Array
+import Data.Conduit.Binary
+import qualified Data.Conduit.List as CL
+import Data.IntervalInverseMap
 
-emptyBuffer :: Int -> PieceBuffer
-emptyBuffer s = PieceBuffer s IM.empty IM.empty
-
-addData :: MonadState PieceBuffer m => (Int, ByteString) -> m ()
-addData = zoomState chunks . alloc
-
-allocNext :: MonadState PieceBuffer m => m (Maybe (Int, Int))
-allocNext = do
-    s <- use pieceSize
-    zoomState requested (gets (listToMaybe . freeAsc s) >>= traverse (g . f))
-    where   f (i, j) = (i, min (j - i) l)
-            g r = r <$ alloc r
-            l = 2^14
-
-full :: PieceBuffer -> Bool
-full b = null (freeAsc (b ^. pieceSize) (b ^. requested))
-
-complete :: PieceBuffer -> Maybe ByteString
-complete (PieceBuffer s cs _) = do
-    (i, buf) <- IM.lookupLE 0 cs
-    BS.take s (BS.drop (-i) buf) <$ guard (i + BS.length buf >= s)
+completePiece :: Int -> ReaderT TorrentEnv IO ()
+completePiece p = do
+    m <- hoist atomically $ do
+        r <- views downloadingPieces (lookup p) <$> viewTVar downloading
+        case r of
+            Nothing -> return Nothing
+            Just st -> do
+                s <- lift (readTVar st)
+                if (null (s ^. requestedChunks . intervalInverseMap))
+                    then do
+                        downloading &%= (downloadingPieces %~ deleteMap p)
+                        return (Just s)
+                    else return Nothing
+    case m of
+        Nothing -> return ()
+        Just (PieceState _ cs) -> do
+            d <- lift (mappedChunksSource cs $$ sinkLbs)
+            completed !%= insertMap p (toStrict d)
+            numCompleted !%= succ
+            torrentEvents !-< PieceCompleted p

@@ -1,83 +1,37 @@
-module Peer.Request (requestThread, RequestEnv(RequestEnv)) where
-
-import Control.Concurrent.STM.Lens
-import Morphisms
-import Peer.Env
-import Peer.Message
-import Peer.State
-import Piece
-import Torrent.Env
+module Peer.Request (requestThread) where
 
 import HTorrentPrelude
+import Control.Concurrent.STM.Lens
+import Data.Chunk
+import Morphisms
+import Peer.Env
+import Peer.State
+import Peer.Request.Source
+import Torrent.Env
+
 import Control.Concurrent.STM.State
 import Control.Monad.STM.Class
-import qualified Data.IntMap as IM
-import qualified Data.IntSet as IS
-import qualified Data.Set as S
-
-data RequestEnv = RequestEnv {
-    _requests :: TQueue ChunkInd,
-    _peer :: PeerEnv
-}
-$(makeLenses ''RequestEnv)
-
-data RequestState = RequestState {
-    _curPieceNum :: Int,
-    _curPiece :: TVar PieceBuffer }
-$(makeLenses ''RequestState)
+import Data.Conduit.List
+import Data.Conduit.TQueue
+import Data.Interval
+import Data.IntervalSet
 
 numPipeline :: Int
 numPipeline = 1
 
-requestThread :: (MonadReader RequestEnv m, MonadIO m) => m ()
-requestThread = evalStateT makeRequests Nothing
+requestThread :: TQueue Chunk -> ReaderT PeerEnv IO ()
+requestThread rs =
+    requestSource $= iterM addRequest $= pipeline $$ sinkTQueue rs
 
-makeRequests ::
-    (MonadReader RequestEnv m, MonadState (Maybe RequestState) m, MonadIO m)
-    => m ()
-makeRequests =
-    forever (embedReader (embedState (liftIO . atomically)) makeRequest)
+addRequest :: Chunk -> ReaderT PeerEnv IO ()
+addRequest c@(Chunk p i) = do
+    peerState . requested !%= over (at p . from nonEmpty) (execState (addInterval i))
+    peerState . pendingRequests !%= insertSet c
 
-makeRequest ::
-    (MonadReader RequestEnv m, MonadState (Maybe RequestState) m, MonadSTM m)
-    =>  m ()
-makeRequest = runMaybeT nextRequest >>= maybe nextPiece waitRequest
+pipeline :: Conduit Chunk (ReaderT PeerEnv IO) Chunk
+pipeline = forever (lift needRequests >>= isolate)
 
-nextRequest :: (MonadState (Maybe RequestState) m, MonadSTM m)
-    => MaybeT m ChunkInd
-nextRequest = do
-    RequestState p b <- MaybeT get
-    (i, l) <- MaybeT (tvarState allocNext b)
-    return (ChunkInd p i l)
-
-waitRequest :: (MonadReader RequestEnv m, MonadSTM m) => ChunkInd -> m ()
-waitRequest i = do
-    viewTVar (peer . peerState . remoteState . choked) >>= liftSTM . guard . not
-    viewTVar (peer . peerState . pendingRequests) >>= liftSTM . guard . (< numPipeline) . S.size
-    peer . peerState . pendingRequests &%= S.insert i
-    view requests >>= liftSTM . flip writeTQueue i
-
-nextPiece ::
-    (MonadReader RequestEnv m, MonadState (Maybe RequestState) m, MonadSTM m)
-    => m ()
-nextPiece = do
-    ps <- interestedPieces 
-    i <- viewTVar (peer . peerState . localState . interested)
-    case listToMaybe ps of
-        Just (p, b) -> do
-            unless i (peer . peerState . localState . interested &.= True)
-            put (Just (RequestState p b))
-        Nothing -> do
-            liftM (i ||) (gets isJust) >>= liftSTM . guard
-            peer . peerState . localState . interested &.= False
-            put Nothing
-
-interestedPieces :: (MonadReader RequestEnv m, MonadSTM m) =>
-    m [(Int, TVar PieceBuffer)]
-interestedPieces = do
-    d <- viewTVar (peer . torrentEnv . downloading)
-    i <- liftM (flip filterKeys d . flip IS.member) (viewTVar (peer . peerState . pieces))
-    liftSTM (filterM (liftM (not . full) . readTVar . snd) (IM.toList i))
-
-filterKeys :: (Int -> Bool) -> IntMap a -> IntMap a
-filterKeys = IM.filterWithKey . (const .)
+needRequests :: ReaderT PeerEnv IO Int
+needRequests = hoist atomically $ do
+    r <- olength <$> viewTVar (peerState . pendingRequests)
+    if r < numPipeline then return (numPipeline - r) else lift retry

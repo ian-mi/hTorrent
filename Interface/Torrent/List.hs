@@ -11,7 +11,7 @@ import Reactive.Threepenny
 torrentList :: [TorrentBehavior] -> UI (Element, Behavior (Maybe TorrentBehavior))
 torrentList torrents = do
     (elements, events) <- (map fst &&& map snd) <$> mapM mkEvent torrents
-    let clicked = foldr (unionWith const) never events
+    let clicked = foldr (UI.unionWith const) never events
     tableElement <- UI.table #+ (torrentListHeader : (UI.element <$> elements))
     focusB <- stepper Nothing (Just <$> clicked)
     return (tableElement, focusB)

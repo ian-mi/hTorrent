@@ -1,9 +1,10 @@
 module Torrent where
 
+import Files
+import Files.MMap
 import MetaInfo
 import Peer.Connection
 import Peer.Env
-import Piece
 import Tracker
 import Torrent.Env
 
@@ -18,11 +19,12 @@ splitPieces = unfoldr f
     where f bs = guard (not (BS.null bs)) >> Just (BS.splitAt 20 bs)
 
 pieceArray :: Int -> [ByteString] -> Array Int ByteString
-pieceArray n bs = listArray (1, n) bs
+pieceArray n bs = listArray (0, n - 1) bs
 
 initTorrent :: MetaInfo -> PortNumber -> IO TorrentEnv
 initTorrent m p = do
     id <- replicateM 20 randomIO
+    let fs = initFileMap (m ^. info)
     let torrentInfo = TorrentInfo {
         _torrentName = m ^. info . name,
         _torrentHash = m ^. info . hash,
@@ -31,7 +33,8 @@ initTorrent m p = do
         _pieceLength = m ^. info . piece_length, _peerId = BS.pack id,
         _portNumber = p,
         _uploaded = 0,
-        _pieceHash = pa
+        _pieceHash = pa,
+        _files = fs
     }
     initTorrentEnv torrentInfo
     where   ps = splitPieces (m ^. info . pieceHashes)
