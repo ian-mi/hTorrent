@@ -14,11 +14,13 @@ $(makeLenses ''ConnectionState)
 
 data PeerState = PeerState {
     _address :: SockAddr,
+    _peerId :: ByteString,
     _localState :: ConnectionState,
     _remoteState :: ConnectionState,
     _pieces :: TVar IntSet,
     _requested :: TVar (IntMap IntervalSet),
-    _pendingRequests :: TVar (Set Chunk),
+    _peerPendingRequests :: TVar (Set Chunk),
+    _cancelledRequests :: TQueue Chunk,
     _events :: TChan PeerEvent
 }
 $(makeLenses ''PeerState)
@@ -26,19 +28,22 @@ $(makeLenses ''PeerState)
 initConnectionState :: IO ConnectionState
 initConnectionState = ConnectionState <$> newTVarIO False <*> newTVarIO True
 
-initPeerState :: SockAddr -> IO PeerState
-initPeerState a = do
+initPeerState :: SockAddr -> ByteString -> IO PeerState
+initPeerState a id = do
     s <- initConnectionState
     r <- initConnectionState
     ps <- newTVarIO mempty
     rq <- newTVarIO mempty
-    pending <- newTVarIO mempty
+    rqs <- newTVarIO mempty
     es <- newBroadcastTChanIO
+    cd <- newTQueueIO
     return PeerState {
         _address = a,
+        _peerId = id,
         _localState = s,
         _remoteState = r,
         _pieces = ps,
         _requested = rq,
-        _pendingRequests = pending,
+        _peerPendingRequests = rqs,
+        _cancelledRequests = cd,
         _events = es }

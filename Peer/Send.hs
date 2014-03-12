@@ -28,7 +28,7 @@ data SendState = SendState {
     _curChoked :: Bool }
 $(makeLenses ''SendState)
 
-data Message = InterestedM | RequestM Chunk | PeerRequestM Chunk
+data Message = InterestedM | RequestM Chunk | PeerRequestM Chunk | CancelledM Chunk
 
 sendThread :: (MonadReader SendEnv m, MonadIO m, MonadThrow m) => Socket -> m ()
 sendThread s = do
@@ -51,13 +51,18 @@ sendMessage (PeerRequestM c@(Chunk p i)) = do
     case r of
         Nothing -> return ()
         Just (takeInterval i -> d) -> yield (PieceMessage c d)
+sendMessage (CancelledM c) = yield (CancelMessage c)
 
 waitMessage :: (MonadState SendState m, MonadReader SendEnv m, MonadIO m) =>
     m Message
 waitMessage = embedState (embedReader (liftIO . atomically)) $ msum [
+    CancelledM <$> waitCancelled,
     InterestedM <$ waitInterested,
     RequestM <$> waitRequest,
     PeerRequestM <$> waitPeerRequest ]
+
+waitCancelled :: (MonadReader SendEnv m, MonadSTM m) => m Chunk
+waitCancelled = view (peer . peerState . cancelledRequests) >>= liftSTM . readTQueue
 
 waitInterested :: (MonadReader SendEnv m, MonadState SendState m, MonadSTM m)
     => m ()

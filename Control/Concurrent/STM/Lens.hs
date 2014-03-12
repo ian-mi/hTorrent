@@ -5,6 +5,7 @@ import Morphisms
 import ClassyPrelude
 import Control.Lens
 import Control.Monad.Reader
+import Control.Monad.State
 import Control.Concurrent.STM
 import Control.Monad.STM.Class
 
@@ -33,6 +34,20 @@ infixr 8 !%=
 (!%=) :: (MonadReader e m, MonadIO m) =>
     Getting (TVar a) e (TVar a) -> (a -> a) -> m ()
 v !%= f = embedReader liftIO (v &%= f)
+
+infixr 8 &%%=
+(&%%=) :: (MonadReader e m, MonadSTM m) =>
+    Getting (TVar a) e (TVar a) -> (a -> (r, a)) -> m r
+v &%%= f = do
+    a <- viewTVar v
+    let (r, a') = f a
+    v &.= a'
+    return r
+
+infixr 8 !%%=
+(!%%=) :: (MonadReader e m, MonadIO m) =>
+    Getting (TVar a) e (TVar a) -> (a -> (r, a)) -> m r
+v !%%= f = embedReader liftIO (v &%%= f)
 
 viewTChan :: (MonadReader e m, MonadSTM m) => Getting (TChan a) e (TChan a) -> m a
 viewTChan v = view v >>= liftSTM . readTChan

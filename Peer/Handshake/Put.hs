@@ -12,7 +12,7 @@ putHandshake = do
     lift putProtocol
     lift (putByteString reservedBytes)
     view torrentHash >>= lift . putByteString
-    view peerId >>= lift . putByteString
+    view localId >>= lift . putByteString
 
 putProtocol :: Put
 putProtocol = putWord8 (fromIntegral protocolLength) >> putByteString protocol

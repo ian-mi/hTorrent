@@ -6,6 +6,7 @@ import MetaInfo
 import Peer.State
 import Torrent.Event
 import Torrent.State.Downloading
+import Torrent.State.Requests
 
 import Data.Array
 import HTorrentPrelude
@@ -20,7 +21,7 @@ data TorrentInfo = TorrentInfo {
     _tracker :: URI,
     _numPieces :: Int,
     _pieceLength :: Int,
-    _peerId :: ByteString,
+    _localId :: ByteString,
     _portNumber :: PortNumber,
     _uploaded :: Int,
     _pieceHash :: Array Int ByteString,
@@ -34,6 +35,7 @@ data TorrentEnv = TorrentEnv {
     _numCompleted :: TVar Int,
     _downloading :: TVar Downloading,
     _peers :: TVar (HashMap ByteString PeerState),
+    _pendingRequests :: TVar Requests,
     _torrentEvents :: TChan TorrentEvent
 }
 $(makeLenses ''TorrentEnv)
@@ -44,6 +46,7 @@ initTorrentEnv i = do
     nC <- newTVarIO 0
     d <- initDownloading (i ^. numPieces) (i ^. pieceLength) (i ^. files) >>= newTVarIO
     ps <- newTVarIO mempty
+    rqs <- newTVarIO emptyRequests
     events <- newBroadcastTChanIO
     return TorrentEnv {
         _torrentInfo = i,
@@ -51,5 +54,6 @@ initTorrentEnv i = do
         _numCompleted = nC,
         _downloading = d,
         _peers = ps,
+        _pendingRequests = rqs,
         _torrentEvents = events
     }

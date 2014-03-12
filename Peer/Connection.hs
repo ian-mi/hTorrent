@@ -11,6 +11,7 @@ import Peer.Send
 import Peer.State
 import Peer.Message
 import Torrent.Env
+import Torrent.Event
 
 import Control.Concurrent.Async
 import Network.Socket
@@ -20,36 +21,40 @@ data PeerConnectionExcept =
     deriving Show
 
 peerThread :: TorrentEnv -> SockAddr -> IO ()
-peerThread t a = do
-    st <- initPeerState a
-    r <- try (hoist (flip runReaderT (PeerEnv t st)) runPeer)
-    return ()
+peerThread env a = do
+    s <- connectPeer a
+    runPeer env a s
+    close s
 
-runPeer :: ExceptT PeerConnectionExcept (ReaderT PeerEnv IO) ()
-runPeer = bracket (lift connectPeer) (lift . lift . close) handlePeer
+runPeer :: TorrentEnv -> SockAddr -> Socket -> IO ()
+runPeer tEnv a s = void $ try $ do
+        id <- mapExceptT FailedHandshake (handshake s (tEnv ^. torrentInfo))
+        st <- lift (initPeerState a id)
+        let env = PeerEnv tEnv st
+        mapExceptT FailedHandshake (runReaderT (addPeer id st) tEnv)
+        lift $ do
+            prs <- newTQueueIO
+            pcd <- newTQueueIO
+            rs <- newTQueueIO
+            prsb <- newEmptyTMVarIO
+            let getEnv = GetEnv prs pcd env
+            let sendEnv = SendEnv rs prsb env
+            let bufEnv = BufEnv prs pcd prsb
+            threads <- mapM async [
+                runReaderT (requestThread rs) env,
+                getThread getEnv s,
+                runReaderT (sendThread  s) sendEnv,
+                runReaderT bufferRequests bufEnv ]
+            waitAnyCancel threads
 
-connectPeer :: ReaderT PeerEnv IO Socket
-connectPeer = do
-    s <- liftIO (socket AF_INET Stream defaultProtocol)
-    view (peerState . address) >>= liftIO . connect s
-    return s
+connectPeer :: SockAddr -> IO Socket
+connectPeer a = do
+    s <- socket AF_INET Stream defaultProtocol
+    s <$ connect s a
 
-handlePeer :: Socket -> ExceptT PeerConnectionExcept (ReaderT PeerEnv IO) ()
-handlePeer s = do
-    mapExceptT FailedHandshake (handshake s)
-    env <- ask
-    lift $ lift $ do
-        prs <- newTQueueIO
-        pcd <- newTQueueIO
-        rs <- newTQueueIO
-        prsb <- newEmptyTMVarIO
-        let getEnv = GetEnv prs pcd env
-        let sendEnv = SendEnv rs prsb env
-        let bufEnv = BufEnv prs pcd prsb
-        threads <- mapM async [
-            runReaderT (requestThread rs) env,
-            getThread getEnv s,
-            runReaderT (sendThread  s) sendEnv,
-            runReaderT bufferRequests bufEnv ]
-        waitAnyCancel threads
-    return ()
+addPeer :: ByteString -> PeerState -> ReaderT TorrentEnv (ExceptT HandshakeExcept IO) ()
+addPeer id st = hoist (hoist atomically) $ do
+    ps <- viewTVar peers
+    assert (InvalidId id) (not (member id ps))
+    peers &.= insertMap id st ps
+    torrentEvents &-< PeerConnected id st

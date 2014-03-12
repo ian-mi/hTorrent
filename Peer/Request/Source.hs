@@ -3,6 +3,7 @@ module Peer.Request.Source where
 import Data.Chunk
 import Data.Interval
 import Data.IntervalSet
+import qualified Data.IntervalInverseMap as InvM
 import Peer.Env
 import Peer.State
 import Torrent.Env
@@ -54,13 +55,23 @@ tryNextPiece :: ReaderT PeerEnv STM (Maybe (Int, TVar PieceState))
 tryNextPiece = do
     d <- viewTVar (torrentEnv . downloading)
     ps <- viewTVar (peerState . pieces)
-    return (nextInterestedPiece d ps)
+    rd <- viewTVar (peerState . requested)
+    lift (nextInterestedPiece d ps rd)
 
-nextInterestedPiece :: Downloading -> IntSet -> Maybe (Int, TVar PieceState)
-nextInterestedPiece d ps = d ^@? interestedPieces ps
+nextInterestedPiece :: Downloading -> IntSet -> IntMap IntervalSet ->
+    STM (Maybe (Int, TVar PieceState))
+nextInterestedPiece d ps rd = runMaybeT $ do
+    (p, _) <- MaybeT (d ^@!? interestedPieces ps rd)
+    MaybeT (return ((p,) <$> lookup p (d ^. downloadingPieces)))
 
-interestedPieces :: IntSet -> IndexedFold Int Downloading (TVar PieceState)
-interestedPieces ps = downloadingPieces . ifolded . ifiltered (const . flip member ps)
+interestedPieces :: IntSet -> IntMap IntervalSet ->
+    IndexedMonadicFold Int STM Downloading PieceState
+interestedPieces ps rd =
+    downloadingPieces . ifolded . ifiltered f . act readTVar . ifiltered g
+    where   f p _ = member p ps
+            g p (PieceState rq _)
+                | Just s <- lookup p rd = not (InvM.containedBy rq s)
+                | otherwise = True
 
 nextRequest :: IntervalSet -> PieceState -> Maybe Interval
 nextRequest rq st = truncateInterval rqLen <$> nextNeeded rq st

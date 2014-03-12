@@ -58,5 +58,6 @@ executable hTorrent
         interval-set >= 0.1 && < 0.2,
         IntervalInverseMap >= 0.1 && < 0.2,
         stm-conduit >= 2.2 && < 2.3,
-        isometry >= 0.1 && < 0.2
+        isometry >= 0.1 && < 0.2,
+        IntervalMap >= 0.3 && < 0.4
     default-language: Haskell2010

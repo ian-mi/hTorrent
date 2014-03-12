@@ -8,6 +8,7 @@ import Peer.Get.Exception
 import Peer.Get.Packet
 import Peer.Message hiding (Piece)
 import Peer.State
+import Peer.Request.Complete
 import Piece
 import Morphisms
 import Torrent.Env
@@ -57,7 +58,7 @@ handlePeerMessage (RequestMessage r) =
     view peerRequests >>= liftIO . atomically . flip writeTQueue r
 handlePeerMessage (PieceMessage c@(Chunk p i) d) = do
     magnify (peer . torrentEnv) (addChunk c d)
-    peer . peerState . pendingRequests !%= deleteSet c
+    magnify peer (completeRequest c)
     peer . peerState . requested !%= over (at p . from nonEmpty) (execState (deleteInterval i))
     magnify (peer . torrentEnv) (completePiece p)
 handlePeerMessage (CancelMessage c) = 

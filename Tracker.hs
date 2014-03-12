@@ -17,7 +17,7 @@ formatRequest :: TorrentInfo -> Request ByteString
 formatRequest i = mkRequest GET uri
     where   query = renderSimpleQuery True [
                 ("info_hash", i ^. torrentHash),
-                ("peer_id", i ^. peerId),
+                ("peer_id", i ^. localId),
                 ("port", fromString (show (i ^. portNumber))),
                 ("uploaded", fromString (show (i ^. uploaded))),
                 ("downloaded", fromString (show 0)),
