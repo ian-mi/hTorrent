@@ -1,0 +1,24 @@
+table.details tr:nth-child(odd) {
+    background-color: #CFD6E8;
+}
+
+div.torrentInfoMenu {
+    background-color: #0066FF;
+}
+
+div.torrentInfoMenu table {
+    background-color: #0066FF;
+	margin: 0px auto;
+}
+
+div.torrentInfoMenu td {
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: large;
+    background-color: #0066FF;
+	padding: 2px 4px;
+}
+
+div.torrentInfoMenu td.selected {
+    background-color: #00398E;
+}
