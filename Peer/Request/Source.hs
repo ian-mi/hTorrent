@@ -1,5 +1,6 @@
 module Peer.Request.Source where
 
+import HTorrentPrelude
 import Data.Chunk
 import Data.Interval
 import Data.IntervalSet
@@ -7,26 +8,33 @@ import qualified Data.IntervalInverseMap as InvM
 import Peer.Env
 import Peer.State
 import Torrent.Env
+import Torrent.State.Availability
 import Torrent.State.Downloading
 
-import HTorrentPrelude
+import Data.Conduit.Combinators hiding (null)
+import qualified Data.IntMap as IM
+import Data.IntSet.Lens
+import Data.Random
 
 rqLen :: Int
 rqLen = 2^14
 
 requestSource :: Source (ReaderT PeerEnv IO) Chunk
-requestSource = forever (lift nextPiece >>= uncurry requestPiece)
+requestSource = repeatM nextPiece $= awaitForever requestChunks
 
-requestPiece :: Int -> TVar PieceState -> Source (ReaderT PeerEnv IO) Chunk
-requestPiece p st = do
-    lift waitUnchoked
-    r <- lift (tryRequest p st)
-    case r of
-        Just i -> do
-            liftSTM (modifyTVar st (request i))
-            yield (Chunk p i)
-            requestPiece p st
+requestChunks :: Int -> Conduit Int (ReaderT PeerEnv IO) Chunk
+requestChunks p = do
+    m <- view (downloadingPieces . at p) <$> viewTVarIO (torrentEnv . downloading)
+    case m of
         Nothing -> return ()
+        Just st -> do
+            r <- lift (waitUnchoked >> tryRequest p st)
+            case r of
+                Just i -> do
+                    liftSTM (modifyTVar st (request i))
+                    yield (Chunk p i)
+                    requestChunks p
+                Nothing -> return ()
 
 waitUnchoked :: ReaderT PeerEnv IO ()
 waitUnchoked = hoist atomically $ do
@@ -35,43 +43,36 @@ waitUnchoked = hoist atomically $ do
 
 tryRequest :: Int -> TVar PieceState -> ReaderT PeerEnv IO (Maybe Interval)
 tryRequest p st = do
-    rq <- viewTVarIO (peerState . requested)
-    nextRequest (rq ^. at p . from nonEmpty) <$> lift (readTVarIO st)
+    rq <- view (at p . from nonEmpty) <$> viewTVarIO (peerState . requested)
+    nextRequest rq <$> lift (readTVarIO st)
 
-nextPiece :: ReaderT PeerEnv IO (Int, TVar PieceState)
+nextPiece :: ReaderT PeerEnv IO Int
 nextPiece = do
-    p <- hoist atomically tryNextPiece
-    maybe waitInterested return p <* peerState . localState . interested !.= True
+    ps <- waitInterested
+    peerState . localState . interested !.= True
+    rs <- magnify (torrentEnv . availability) (ReaderT (atomically . rarest ps))
+    lift (sample (randomElement rs))
 
-waitInterested :: ReaderT PeerEnv IO (Int, TVar PieceState)
+waitInterested :: ReaderT PeerEnv IO IntSet
 waitInterested = do
-    peerState . localState . interested !.= False
-    hoist atomically waitNextPiece
+    ps <- hoist atomically interestedPieces
+    if null ps
+        then do
+            peerState . localState . interested !.= False
+            hoist atomically waitInterestedPieces
+        else return ps
 
-waitNextPiece :: ReaderT PeerEnv STM (Int, TVar PieceState)
-waitNextPiece = tryNextPiece >>= maybe (lift retry) return
+waitInterestedPieces :: ReaderT PeerEnv STM IntSet
+waitInterestedPieces = do
+    ps <- interestedPieces
+    if not (null ps) then return ps else lift retry
 
-tryNextPiece :: ReaderT PeerEnv STM (Maybe (Int, TVar PieceState))
-tryNextPiece = do
-    d <- viewTVar (torrentEnv . downloading)
+interestedPieces :: ReaderT PeerEnv STM IntSet
+interestedPieces = do
+    dP <- views downloadingPieces IM.keysSet <$> viewTVar (torrentEnv . downloading)
     ps <- viewTVar (peerState . pieces)
-    rd <- viewTVar (peerState . requested)
-    lift (nextInterestedPiece d ps rd)
-
-nextInterestedPiece :: Downloading -> IntSet -> IntMap IntervalSet ->
-    STM (Maybe (Int, TVar PieceState))
-nextInterestedPiece d ps rd = runMaybeT $ do
-    (p, _) <- MaybeT (d ^@!? interestedPieces ps rd)
-    MaybeT (return ((p,) <$> lookup p (d ^. downloadingPieces)))
-
-interestedPieces :: IntSet -> IntMap IntervalSet ->
-    IndexedMonadicFold Int STM Downloading PieceState
-interestedPieces ps rd =
-    downloadingPieces . ifolded . ifiltered f . act readTVar . ifiltered g
-    where   f p _ = member p ps
-            g p (PieceState rq _)
-                | Just s <- lookup p rd = not (InvM.containedBy rq s)
-                | otherwise = True
+    rq <- IM.keysSet <$> viewTVar (peerState . requested)
+    return (difference (intersection dP ps) rq)
 
 nextRequest :: IntervalSet -> PieceState -> Maybe Interval
 nextRequest rq st = truncateInterval rqLen <$> nextNeeded rq st

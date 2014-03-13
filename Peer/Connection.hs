@@ -12,8 +12,10 @@ import Peer.State
 import Peer.Message
 import Torrent.Env
 import Torrent.Event
+import Torrent.State.Availability
 
 import Control.Concurrent.Async
+import Data.IntSet.Lens
 import Network.Socket
 
 data PeerConnectionExcept =
@@ -46,6 +48,12 @@ runPeer tEnv a s = void $ try $ do
                 runReaderT (sendThread  s) sendEnv,
                 runReaderT bufferRequests bufEnv ]
             waitAnyCancel threads
+            runReaderT cleanupPeer env
+
+cleanupPeer :: ReaderT PeerEnv IO ()
+cleanupPeer = hoist atomically $ do
+    ps <- viewTVar (peerState . pieces)
+    magnify (torrentEnv . availability) (mapMOf_ members decAvail ps)
 
 connectPeer :: SockAddr -> IO Socket
 connectPeer a = do

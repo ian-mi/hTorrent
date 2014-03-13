@@ -1,15 +1,16 @@
 module Torrent.Env where
 
+import HTorrentPrelude
 import Files
 import Files.MMap
 import MetaInfo
 import Peer.State
 import Torrent.Event
+import Torrent.State.Availability
 import Torrent.State.Downloading
 import Torrent.State.Requests
 
 import Data.Array
-import HTorrentPrelude
 import qualified Data.IntMap as IM
 import Data.Isometry
 import Network.URI
@@ -34,6 +35,7 @@ data TorrentEnv = TorrentEnv {
     _completed :: TVar (IntMap ByteString),
     _numCompleted :: TVar Int,
     _downloading :: TVar Downloading,
+    _availability :: Availability,
     _peers :: TVar (HashMap ByteString PeerState),
     _pendingRequests :: TVar Requests,
     _torrentEvents :: TChan TorrentEvent
@@ -45,6 +47,7 @@ initTorrentEnv i = do
     c <- newTVarIO mempty
     nC <- newTVarIO 0
     d <- initDownloading (i ^. numPieces) (i ^. pieceLength) (i ^. files) >>= newTVarIO
+    av <- atomically (initAvail (i^. numPieces))
     ps <- newTVarIO mempty
     rqs <- newTVarIO emptyRequests
     events <- newBroadcastTChanIO
@@ -53,6 +56,7 @@ initTorrentEnv i = do
         _completed = c,
         _numCompleted = nC,
         _downloading = d,
+        _availability = av,
         _peers = ps,
         _pendingRequests = rqs,
         _torrentEvents = events

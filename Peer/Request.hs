@@ -18,7 +18,7 @@ import Data.Interval
 import Data.IntervalSet
 
 numPipeline :: Int
-numPipeline = 3
+numPipeline = 10
 
 requestThread :: TQueue Chunk -> ReaderT PeerEnv IO ()
 requestThread rs =

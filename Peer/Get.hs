@@ -13,6 +13,7 @@ import Piece
 import Morphisms
 import Torrent.Env
 import Torrent.Event
+import Torrent.State.Availability
 import Torrent.State.Downloading
 
 import HTorrentPrelude
@@ -21,6 +22,7 @@ import qualified Data.Conduit.List as CL
 import Data.Conduit.Network
 import Data.Interval
 import Data.IntervalSet
+import Data.IntSet.Lens
 import Data.Isometry
 import Network.Socket
 
@@ -52,8 +54,17 @@ handlePeerMessage InterestedMessage = do
 handlePeerMessage UninterestedMessage = do
     peer . peerState . remoteState . interested !.= False
     peer . peerState . events !-< InterestedRemote False
-handlePeerMessage (HaveMessage i) = peer . peerState . pieces !%= insertSet i
-handlePeerMessage (BitfieldMessage b) = peer . peerState . pieces !.= b
+handlePeerMessage (HaveMessage i) = hoist atomically $ do
+    ps <- viewTVar (peer . peerState . pieces)
+    when (notMember i ps) $ do
+        peer . peerState . pieces &.= insertSet i ps
+        magnify (peer . torrentEnv . availability) (incAvail i)
+handlePeerMessage (BitfieldMessage b) = hoist atomically $ do
+    ps <- viewTVar (peer . peerState . pieces)
+    peer . peerState . pieces &.= b
+    magnify (peer . torrentEnv . availability) $ do
+        mapMOf_ members incAvail (difference b ps)
+        mapMOf_ members decAvail (difference ps b)
 handlePeerMessage (RequestMessage r) =
     view peerRequests >>= liftIO . atomically . flip writeTQueue r
 handlePeerMessage (PieceMessage c@(Chunk p i) d) = do
